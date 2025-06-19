@@ -3,10 +3,11 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, MessageSquare } from 'lucide-react';
+import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircle, CheckCircle2 } from 'lucide-react';
 import type { EndUserProfile, SessionComment } from '@/lib/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { endUserProfiles, consultantProfiles } from '@/lib/mockData';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -46,6 +47,93 @@ export default function DashboardPage() {
           <p>Select an option from the sidebar to get started.</p>
         </CardContent>
       </Card>
+
+      {user.role === 'admin' && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl">Platform KPI Overview</CardTitle>
+            <CardDescription>Key metrics for platform performance and user engagement.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total End Users</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{endUserProfiles.length}</div>
+                <p className="text-xs text-muted-foreground">Currently registered end users</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Consultants</CardTitle>
+                <Briefcase className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{consultantProfiles.length}</div>
+                <p className="text-xs text-muted-foreground">Currently registered consultants</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">New Users (7 Days)</CardTitle>
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">5</div> {/* Placeholder */}
+                <p className="text-xs text-muted-foreground">Illustrative data</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">New Consultants (7 Days)</CardTitle>
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">2</div> {/* Placeholder */}
+                <p className="text-xs text-muted-foreground">Illustrative data</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Platform Traffic</CardTitle>
+                <Activity className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">High</div> {/* Placeholder */}
+                <p className="text-xs text-muted-foreground">Overall activity level</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Queries Raised</CardTitle>
+                <HelpCircle className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">50</div> {/* Placeholder */}
+                <p className="text-xs text-muted-foreground">Total support queries</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Queries Solved</CardTitle>
+                <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">45</div> {/* Placeholder */}
+                <p className="text-xs text-muted-foreground">Resolved support queries</p>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {user.role === 'enduser' && endUserProfile && (
         <Card className="shadow-lg">
