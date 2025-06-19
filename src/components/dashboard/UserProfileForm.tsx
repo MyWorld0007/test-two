@@ -1,5 +1,7 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,7 +15,6 @@ import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -32,6 +33,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export function UserProfileForm() {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
   
   const defaultValues = user?.role === 'enduser' ? {
     ...(user.profile as EndUserProfile),
@@ -57,20 +59,28 @@ export function UserProfileForm() {
   const onSubmit = (data: ProfileFormValues) => {
     try {
       const updatedProfileData = {
-        ...(user.profile as EndUserProfile), // keep existing fields like userId, documents, sessions
-        ...data, // apply updated form fields
+        ...(user.profile as EndUserProfile), 
+        ...data, 
       };
       updateUserProfile(updatedProfileData);
       toast({
         title: "Profile Updated",
         description: "Your profile information has been successfully updated.",
       });
+      setIsEditing(false); // Switch back to view mode after successful save
     } catch (error) {
       toast({
         title: "Update Failed",
         description: "Could not update your profile. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (user?.role === 'enduser') {
+      form.reset(user.profile as EndUserProfile); // Reset form to original data
     }
   };
 
@@ -90,7 +100,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -101,7 +111,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Middle Name (Optional)</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -112,7 +122,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -134,7 +144,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
-                    <FormControl><Input type="tel" {...field} /></FormControl>
+                    <FormControl><Input type="tel" {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -145,7 +155,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Age</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                    <FormControl><Input type="number" {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -156,7 +166,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditing}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -178,7 +188,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>DISE Name (Optional)</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -189,17 +199,28 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stage (Optional)</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={!isEditing} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
+            <div className="flex justify-end gap-2">
+              {isEditing ? (
+                <>
+                  <Button type="button" variant="outline" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" onClick={() => setIsEditing(true)}>
+                  Edit Profile
+                </Button>
+              )}
             </div>
           </form>
         </Form>
