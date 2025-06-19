@@ -1,3 +1,4 @@
+
 'use client';
 
 import type React from 'react';
@@ -94,7 +95,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
           <SidebarMenu>
             {filteredNavItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} legacyBehavior passHref>
+                <Link href={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
