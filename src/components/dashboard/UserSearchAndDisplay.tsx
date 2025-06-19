@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -46,18 +47,28 @@ export function UserSearchAndDisplay() {
     setIsCommenting(true);
     
     const newComment: SessionComment = {
-      id: `session_${Date.now()}`,
+      id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       consultantId: (consultantUser.profile as any).consultantId,
       consultantName: `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`,
       comment: comment.trim(),
       timestamp: new Date().toISOString(),
     };
 
-    // Simulate API call
+    // This function mutates the sessions array of the user profile object
+    // that `foundUser` (if it's from `endUserProfiles`) refers to.
     addCommentToUserSession(foundUser.userId, newComment);
     
-    // Update local state to reflect change
-    setFoundUser(prevUser => prevUser ? { ...prevUser, sessions: [...prevUser.sessions, newComment] } : null);
+    // Since `foundUser` (via prevUser) is a reference to the mutated object,
+    // its `sessions` array now ALREADY includes `newComment`.
+    // We just need to trigger a re-render by creating a new object reference for the state.
+    setFoundUser(prevUser => {
+      if (!prevUser) return null;
+      // prevUser itself (the object reference) has had its .sessions property mutated.
+      // To ensure React picks up the change, we create a new shallow copy of the user object.
+      // The sessions array within this new object will be the mutated one.
+      return { ...prevUser }; 
+    });
+
     setComment('');
     toast({ title: "Comment Added", description: "Your comment has been saved." });
     setIsCommenting(false);
@@ -161,3 +172,4 @@ export function UserSearchAndDisplay() {
     </div>
   );
 }
+
