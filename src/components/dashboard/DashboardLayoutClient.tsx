@@ -101,10 +101,10 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                     isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
                     tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
                   >
-                    <a>
+                    <>
                       <item.icon />
                       <span>{item.label}</span>
-                    </a>
+                    </>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
