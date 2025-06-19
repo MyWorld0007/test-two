@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ChangeEvent } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import type { Document as DocumentType, EndUserProfile } from '@/lib/types';
@@ -165,16 +166,12 @@ export function DocumentManager() {
                       <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" title="View OCR Result / Scan" onClick={() => { setViewingDocument(doc); if(doc.extractedText) setOcrResult(doc.extractedText); else setOcrResult(null); }}>
-                          <ScanLine className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                       <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
+                      <Button variant="outline" size="icon" title="View OCR Result / Scan" onClick={() => { setViewingDocument(doc); if(doc.extractedText) setOcrResult(doc.extractedText); else setOcrResult(null); }}>
+                        <ScanLine className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="icon" title="Delete Document">
