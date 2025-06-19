@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const profileSchema = z.object({
+  uniqueId: z.string().optional(), // Added for display, will be disabled
   firstName: z.string().min(1, 'First name is required'),
   middleName: z.string().optional(),
   lastName: z.string().min(1, 'Last name is required'),
@@ -37,7 +38,8 @@ export function UserProfileForm() {
   
   const defaultValues = user?.role === 'enduser' ? {
     ...(user.profile as EndUserProfile),
-    email: (user.profile as EndUserProfile).email, // ensure email is pre-filled
+    email: (user.profile as EndUserProfile).email, 
+    uniqueId: (user.profile as EndUserProfile).uniqueId,
   } : {} as ProfileFormValues;
 
 
@@ -48,9 +50,12 @@ export function UserProfileForm() {
 
   useEffect(() => {
     if (user?.role === 'enduser') {
-      form.reset(user.profile as EndUserProfile);
+      form.reset({
+        ...(user.profile as EndUserProfile),
+        uniqueId: (user.profile as EndUserProfile).uniqueId, // Ensure uniqueId is reset
+      });
     }
-  }, [user, form]);
+  }, [user, form, isEditing]); // Add isEditing to dependencies to reset form on cancel
 
   if (user?.role !== 'enduser') {
     return <p>Invalid user role for this form.</p>;
@@ -58,16 +63,17 @@ export function UserProfileForm() {
 
   const onSubmit = (data: ProfileFormValues) => {
     try {
+      const { uniqueId, ...restOfData } = data; // Exclude uniqueId from submission data
       const updatedProfileData = {
         ...(user.profile as EndUserProfile), 
-        ...data, 
+        ...restOfData, 
       };
       updateUserProfile(updatedProfileData);
       toast({
         title: "Profile Updated",
         description: "Your profile information has been successfully updated.",
       });
-      setIsEditing(false); // Switch back to view mode after successful save
+      setIsEditing(false); 
     } catch (error) {
       toast({
         title: "Update Failed",
@@ -79,9 +85,7 @@ export function UserProfileForm() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    if (user?.role === 'enduser') {
-      form.reset(user.profile as EndUserProfile); // Reset form to original data
-    }
+    // Form reset is handled by useEffect
   };
 
   return (
@@ -94,6 +98,17 @@ export function UserProfileForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="uniqueId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unique ID</FormLabel>
+                    <FormControl><Input {...field} disabled /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="firstName"
@@ -166,7 +181,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditing}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={!isEditing}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
