@@ -153,6 +153,92 @@ export function DocumentManager() {
     }
   };
   
+  const handleScanAndSummarize = async (doc: DocumentType) => {
+    toast({ title: 'Generating summary...', description: 'Please wait while we scan and summarize your document.' });
+
+    let textToSummarize = doc.extractedText;
+
+    // Step 1: Scan document if text doesn't exist
+    if (!textToSummarize) {
+      if (!doc.url.startsWith('blob:')) {
+        toast({
+          title: 'Summarization Failed',
+          description: 'Scanning is required first and is only available for newly uploaded files in this demo.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      try {
+        const response = await fetch(doc.url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const base64data = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        const scanResult = await scanDocument({ documentDataUri: base64data });
+        textToSummarize = scanResult.extractedText;
+        
+        // Update document in local state to reflect extracted text
+        const updatedDocsWithText = documents.map((d) =>
+          d.id === doc.id ? { ...d, extractedText: textToSummarize } : d
+        );
+        setDocuments(updatedDocsWithText);
+
+      } catch (e) {
+        console.error('OCR Error during combined flow:', e);
+        toast({
+          title: 'Scan Failed',
+          description: 'Could not extract text from the document. Please try again.',
+          variant: 'destructive',
+        });
+        return; // Stop if scanning fails
+      }
+    }
+
+    if (!textToSummarize) {
+      toast({ title: "Summarization Error", description: "No text was found to summarize.", variant: "destructive" });
+      return;
+    }
+
+    // Step 2: Summarize the text
+    try {
+      const summaryResult = await summarizeText({ textToSummarize });
+      const summary = summaryResult.summary;
+
+      // Update document with summary and persist to profile
+      const finalUpdatedDocs = documents.map((d) =>
+        d.id === doc.id ? { ...d, extractedText: textToSummarize, summary } : d
+      );
+      updateUserProfile({ ...userProfile, documents: finalUpdatedDocs });
+      setDocuments(finalUpdatedDocs);
+
+      toast({
+        title: 'Summary Generated',
+        description: 'The document has been successfully summarized.',
+      });
+
+      // Open the dialog to show the final result
+      const finalDoc = finalUpdatedDocs.find(d => d.id === doc.id);
+      if (finalDoc) {
+        setViewingDocument(finalDoc);
+        setOcrResult(finalDoc.extractedText || null);
+        setSummaryResult(finalDoc.summary || null);
+      }
+
+    } catch (e) {
+      console.error('Summarization Error during combined flow:', e);
+      toast({
+        title: 'Summarization Failed',
+        description: (e as Error).message || 'Could not summarize the document.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleRenameDocument = () => {
     if (!editingDocument || !newFileName.trim()) return;
     const updatedDocs = documents.map(d => d.id === editingDocument.id ? {...d, name: newFileName.trim()} : d);
@@ -206,6 +292,9 @@ export function DocumentManager() {
                     <div className="flex gap-1.5 flex-shrink-0">
                       <Button variant="outline" size="icon" title="View Document Details" onClick={() => { setViewingDocument(doc); setOcrResult(doc.extractedText || null); setSummaryResult(doc.summary || null); }}>
                         <ScanLine className="h-4 w-4" />
+                      </Button>
+                       <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
+                        <FileJson2 className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
                         <Edit2 className="h-4 w-4" />
