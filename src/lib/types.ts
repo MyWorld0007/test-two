@@ -6,6 +6,7 @@ export interface Document {
   url: string; // For mock, this could be a placeholder or data URI
   uploadedAt: string;
   extractedText?: string;
+  summary?: string;
 }
 
 export interface SessionComment {

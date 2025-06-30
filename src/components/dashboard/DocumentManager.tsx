@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import type { Document as DocumentType, EndUserProfile } from '@/lib/types';
 import { scanDocument } from '@/ai/flows/scan-document';
+import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download } from 'lucide-react';
+import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download, FileJson2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export function DocumentManager() {
@@ -23,7 +24,9 @@ export function DocumentManager() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [ocrResult, setOcrResult] = useState<string | null>(null);
+  const [summaryResult, setSummaryResult] = useState<string | null>(null);
   const [viewingDocument, setViewingDocument] = useState<DocumentType | null>(null);
   const [editingDocument, setEditingDocument] = useState<DocumentType | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -82,7 +85,6 @@ export function DocumentManager() {
 
     setIsScanning(true);
     setOcrResult(null);
-    setViewingDocument(doc); // Show OCR result in the context of this document
 
     try {
         // Fetch the blob data and convert to data URI
@@ -99,6 +101,7 @@ export function DocumentManager() {
                 const updatedDocs = documents.map(d => d.id === doc.id ? {...d, extractedText: result.extractedText} : d);
                 updateUserProfile({ ...userProfile, documents: updatedDocs });
                 setDocuments(updatedDocs);
+                setViewingDocument(prev => prev ? { ...prev, extractedText: result.extractedText } : null);
                 toast({ title: "Scan Successful", description: "Document text extracted." });
             } catch (e) {
                 console.error("OCR Error:", e);
@@ -112,6 +115,41 @@ export function DocumentManager() {
         console.error("File to Data URI Error:", error);
         toast({ title: "Scan Preparation Failed", description: "Could not prepare the document for scanning.", variant: "destructive" });
         setIsScanning(false);
+    }
+  };
+
+  const handleSummarizeDocument = async (doc: DocumentType) => {
+    if (!doc.extractedText) {
+        toast({ title: "Summarization Error", description: "Document must be scanned first to extract text.", variant: "destructive" });
+        return;
+    }
+
+    setIsSummarizing(true);
+    setSummaryResult(null);
+
+    try {
+        const result = await summarizeText({ textToSummarize: doc.extractedText });
+        const summary = result.summary;
+        setSummaryResult(summary);
+
+        // Update document with the summary in the main state
+        const updatedDocs = documents.map(d =>
+            d.id === doc.id ? { ...d, summary: summary } : d
+        );
+        updateUserProfile({ ...userProfile, documents: updatedDocs });
+        setDocuments(updatedDocs);
+        
+        // Also update the viewing document state directly to reflect the change
+        setViewingDocument(prev => prev ? { ...prev, summary: summary } : null);
+
+        toast({ title: "Summarization Successful", description: "Document summary has been generated." });
+
+    } catch (e) {
+        console.error("Summarization Error:", e);
+        toast({ title: "Summarization Failed", description: (e as Error).message || "Could not summarize the document.", variant: "destructive" });
+        setSummaryResult("Failed to generate summary.");
+    } finally {
+        setIsSummarizing(false);
     }
   };
   
@@ -166,7 +204,7 @@ export function DocumentManager() {
                       <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
-                      <Button variant="outline" size="icon" title="View OCR Result / Scan" onClick={() => { setViewingDocument(doc); if(doc.extractedText) setOcrResult(doc.extractedText); else setOcrResult(null); }}>
+                      <Button variant="outline" size="icon" title="View Document Details" onClick={() => { setViewingDocument(doc); setOcrResult(doc.extractedText || null); setSummaryResult(doc.summary || null); }}>
                         <ScanLine className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
@@ -208,30 +246,59 @@ export function DocumentManager() {
       </Card>
       
       {/* Dialog for viewing/scanning OCR */}
-      <Dialog open={!!viewingDocument} onOpenChange={(isOpen) => !isOpen && setViewingDocument(null)}>
-        <DialogContent className="sm:max-w-2xl">
+      <Dialog open={!!viewingDocument} onOpenChange={(isOpen) => { if (!isOpen) { setViewingDocument(null); setOcrResult(null); setSummaryResult(null); } }}>
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Document: {viewingDocument?.name}</DialogTitle>
+            <DialogTitle>Document Details: {viewingDocument?.name}</DialogTitle>
             <DialogDescription>
-              Extracted text from the document. You can scan it if not already done.
+              View extracted text and generate an AI summary in simple terms.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-96 my-4 border p-4 rounded-md bg-muted/20">
-            {isScanning && !ocrResult && <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <p className="ml-2">Scanning...</p></div>}
-            {ocrResult ? (
-                <pre className="whitespace-pre-wrap text-sm">{ocrResult}</pre>
-            ) : (
-                <p className="text-muted-foreground">No OCR text available yet. Click "Scan Document" to extract text.</p>
-            )}
-          </ScrollArea>
-          <DialogFooter className="sm:justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto p-1">
+            <div>
+              <h3 className="font-semibold mb-2 text-lg">Extracted Text (OCR)</h3>
+              <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
+                {isScanning && !ocrResult ? (
+                  <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Scanning...</p></div>
+                ) : ocrResult ? (
+                  <pre className="whitespace-pre-wrap text-sm">{ocrResult}</pre>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                    <p className="text-muted-foreground">No text has been extracted from this document yet.</p>
+                    {viewingDocument && !viewingDocument.extractedText && viewingDocument.url.startsWith('blob:') && (
+                      <Button onClick={() => viewingDocument && handleScanDocument(viewingDocument)} disabled={isScanning} className="mt-4">
+                        {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                        Scan Now
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2 text-lg">AI Summary</h3>
+              <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
+                {isSummarizing && !summaryResult ? (
+                  <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Generating Summary...</p></div>
+                ) : summaryResult ? (
+                  <pre className="whitespace-pre-wrap text-sm">{summaryResult}</pre>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                    <p className="text-muted-foreground">No summary available.</p>
+                    {viewingDocument?.extractedText && !viewingDocument?.summary && (
+                      <Button onClick={() => viewingDocument && handleSummarizeDocument(viewingDocument)} disabled={isSummarizing || isScanning} className="mt-4">
+                        {isSummarizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileJson2 className="mr-2 h-4 w-4" />}
+                        Summarize with AI
+                      </Button>
+                    )}
+                    {!viewingDocument?.extractedText && <p className="text-xs text-muted-foreground mt-2">Scan the document first to enable summarization.</p>}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
             <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-            {!viewingDocument?.extractedText && (
-              <Button onClick={() => viewingDocument && handleScanDocument(viewingDocument)} disabled={isScanning || !viewingDocument?.url.startsWith('blob:')}>
-                {isScanning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
-                Scan Document
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
