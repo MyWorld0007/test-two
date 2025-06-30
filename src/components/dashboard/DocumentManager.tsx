@@ -78,43 +78,45 @@ export function DocumentManager() {
   };
 
   const handleScanDocument = async (doc: DocumentType) => {
-    if (!doc.url.startsWith('blob:')) { // Simple check if it's a local blob URL
-        toast({ title: "Scan Error", description: "OCR scanning is only available for newly uploaded files in this demo.", variant: "destructive" });
-        return;
+    if (!doc.url.startsWith('blob:')) {
+      toast({ title: "Scan Error", description: "OCR scanning is only available for newly uploaded files in this demo.", variant: "destructive" });
+      return;
     }
 
     setIsScanning(true);
     setOcrResult(null);
 
+    let base64data: string;
     try {
-        // Fetch the blob data and convert to data URI
-        const response = await fetch(doc.url);
-        const blob = await response.blob();
+      const response = await fetch(doc.url);
+      const blob = await response.blob();
+      base64data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(blob);
-        reader.onloadend = async () => {
-            const base64data = reader.result as string;
-            try {
-                const result = await scanDocument({ documentDataUri: base64data });
-                setOcrResult(result.extractedText);
-                // Update document with extracted text
-                const updatedDocs = documents.map(d => d.id === doc.id ? {...d, extractedText: result.extractedText} : d);
-                updateUserProfile({ ...userProfile, documents: updatedDocs });
-                setDocuments(updatedDocs);
-                setViewingDocument(prev => prev ? { ...prev, extractedText: result.extractedText } : null);
-                toast({ title: "Scan Successful", description: "Document text extracted." });
-            } catch (e) {
-                console.error("OCR Error:", e);
-                toast({ title: "Scan Failed", description: (e as Error).message || "Could not scan the document.", variant: "destructive" });
-                setOcrResult("Failed to extract text.");
-            } finally {
-                setIsScanning(false);
-            }
-        };
+      });
     } catch (error) {
-        console.error("File to Data URI Error:", error);
-        toast({ title: "Scan Preparation Failed", description: "Could not prepare the document for scanning.", variant: "destructive" });
-        setIsScanning(false);
+      console.error("File to Data URI Error:", error);
+      toast({ title: "Scan Preparation Failed", description: "Could not read the document. It may be from a previous session. Please re-upload.", variant: "destructive" });
+      setIsScanning(false);
+      return;
+    }
+
+    try {
+      const result = await scanDocument({ documentDataUri: base64data });
+      setOcrResult(result.extractedText);
+      const updatedDocs = documents.map(d => d.id === doc.id ? { ...d, extractedText: result.extractedText } : d);
+      updateUserProfile({ ...userProfile, documents: updatedDocs });
+      setDocuments(updatedDocs);
+      setViewingDocument(prev => prev ? { ...prev, extractedText: result.extractedText } : null);
+      toast({ title: "Scan Successful", description: "Document text extracted." });
+    } catch (e) {
+      console.error("OCR Error:", e);
+      toast({ title: "Scan Failed", description: (e as Error).message || "Could not scan the document.", variant: "destructive" });
+      setOcrResult("Failed to extract text.");
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -169,16 +171,23 @@ export function DocumentManager() {
         return;
       }
       
+      let base64data: string;
       try {
         const response = await fetch(doc.url);
         const blob = await response.blob();
-        const reader = new FileReader();
-        const base64data = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        base64data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
         });
-
+      } catch (error) {
+        console.error("File to Data URI Error:", error);
+        toast({ title: "File Read Error", description: "Could not read document. It may be from a previous session. Please re-upload.", variant: "destructive" });
+        return;
+      }
+      
+      try {
         const scanResult = await scanDocument({ documentDataUri: base64data });
         textToSummarize = scanResult.extractedText;
         
@@ -206,8 +215,8 @@ export function DocumentManager() {
 
     // Step 2: Summarize the text
     try {
-      const summaryResult = await summarizeText({ textToSummarize });
-      const summary = summaryResult.summary;
+      const summaryResultText = await summarizeText({ textToSummarize });
+      const summary = summaryResultText.summary;
 
       // Update document with summary and persist to profile
       const finalUpdatedDocs = documents.map((d) =>
