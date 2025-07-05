@@ -1,4 +1,4 @@
-import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest } from './types';
+import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus } from './types';
 
 export const demoEndUser: EndUserProfile = {
   userId: 'user1',
@@ -95,6 +95,46 @@ export const addAccessRequest = (userId: string, request: AccessRequest) => {
     }
   }
 };
+
+export const updateAccessRequest = (userId: string, requestId: string, newStatus: AccessRequestStatus) => {
+  const userProfile = endUserProfiles.find(p => p.userId === userId);
+  if (userProfile) {
+    const requestIndex = userProfile.accessRequests.findIndex(r => r.requestId === requestId);
+    if (requestIndex !== -1) {
+      userProfile.accessRequests[requestIndex].status = newStatus;
+      updateEndUserProfile(userProfile);
+      return true;
+    }
+  }
+  return false;
+};
+
+export const grantConsultantAccess = (userId: string, consultantId: string) => {
+  const userProfile = endUserProfiles.find(p => p.userId === userId);
+  const consultantProfile = consultantProfiles.find(c => c.consultantId === consultantId);
+
+  if (userProfile && consultantProfile) {
+      // If a request exists (pending/declined), update it. Otherwise, create a new one.
+      const existingRequest = userProfile.accessRequests.find(r => r.consultantId === consultantId);
+
+      if (existingRequest) {
+          existingRequest.status = 'approved';
+      } else {
+          const newRequest: AccessRequest = {
+              requestId: `req_${Date.now()}`,
+              consultantId: consultantId,
+              consultantName: `${consultantProfile.firstName} ${consultantProfile.lastName}`,
+              status: 'approved',
+              requestedAt: new Date().toISOString(),
+          };
+          userProfile.accessRequests.push(newRequest);
+      }
+      updateEndUserProfile(userProfile);
+      return true;
+  }
+  return false;
+};
+
 
 export const addDocumentToUser = (userId: string, document: Document) => {
   const userProfile = endUserProfiles.find(p => p.userId === userId);

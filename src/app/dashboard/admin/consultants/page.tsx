@@ -41,7 +41,7 @@ export default function AdminManageConsultantsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Specialization</TableHead>
-                <TableHead>Experience</TableHead>
+                <TableHead>Users Attended</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -51,7 +51,7 @@ export default function AdminManageConsultantsPage() {
                   <TableCell className="font-medium">{`${consultant.firstName} ${consultant.lastName}`}</TableCell>
                   <TableCell>{consultant.email}</TableCell>
                   <TableCell>{consultant.specializationField}</TableCell>
-                  <TableCell>{consultant.totalExperience} years</TableCell>
+                  <TableCell>{consultant.attendedUsers.length}</TableCell>
                   <TableCell className="text-right space-x-2">
                      <Button variant="ghost" size="icon" onClick={() => handleViewConsultant(consultant.consultantId)} title="View Consultant">
                       <Eye className="h-4 w-4" />
