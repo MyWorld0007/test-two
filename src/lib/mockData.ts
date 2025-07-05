@@ -1,4 +1,4 @@
-import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment } from './types';
+import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest } from './types';
 
 export const demoEndUser: EndUserProfile = {
   userId: 'user1',
@@ -19,6 +19,7 @@ export const demoEndUser: EndUserProfile = {
   sessions: [
     { id: 'session1', consultantId: 'consultant1', consultantName: 'Dr. Alice Smith', comment: 'Patient is responding well to treatment.', timestamp: new Date().toISOString() }
   ],
+  accessRequests: [],
 };
 
 export const demoConsultant: ConsultantProfile = {
@@ -30,6 +31,7 @@ export const demoConsultant: ConsultantProfile = {
   qualificationNumber: 'MD45678',
   totalExperience: 10,
   specializationField: 'Cardiology',
+  attendedUsers: [],
 };
 
 export const demoAdmin: AdminProfile = {
@@ -65,7 +67,9 @@ export const updateEndUserProfile = (updatedProfile: EndUserProfile) => {
   if (index !== -1) {
     endUserProfiles[index] = updatedProfile;
   }
-  mockUsersDatabase[updatedProfile.email].profileData = updatedProfile;
+  if (mockUsersDatabase[updatedProfile.email]) {
+    mockUsersDatabase[updatedProfile.email].profileData = updatedProfile;
+  }
 };
 
 export const updateConsultantProfile = (updatedProfile: ConsultantProfile) => {
@@ -73,7 +77,23 @@ export const updateConsultantProfile = (updatedProfile: ConsultantProfile) => {
   if (index !== -1) {
     consultantProfiles[index] = updatedProfile;
   }
-  mockUsersDatabase[updatedProfile.email].profileData = updatedProfile;
+  if (mockUsersDatabase[updatedProfile.email]) {
+    mockUsersDatabase[updatedProfile.email].profileData = updatedProfile;
+  }
+};
+
+export const addAccessRequest = (userId: string, request: AccessRequest) => {
+  const userProfile = endUserProfiles.find(p => p.userId === userId);
+  if (userProfile) {
+    // Avoid adding duplicate pending requests from the same consultant
+    const existingRequest = userProfile.accessRequests.find(
+      r => r.consultantId === request.consultantId && r.status === 'pending'
+    );
+    if (!existingRequest) {
+      userProfile.accessRequests.push(request);
+      updateEndUserProfile(userProfile);
+    }
+  }
 };
 
 export const addDocumentToUser = (userId: string, document: Document) => {

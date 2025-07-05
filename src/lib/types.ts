@@ -1,5 +1,15 @@
 export type UserRole = 'enduser' | 'consultant' | 'admin';
 
+export type AccessRequestStatus = 'pending' | 'approved' | 'declined';
+
+export interface AccessRequest {
+  requestId: string;
+  consultantId: string;
+  consultantName: string;
+  status: AccessRequestStatus;
+  requestedAt: string;
+}
+
 export interface Document {
   id: string;
   name: string;
@@ -31,6 +41,7 @@ export interface EndUserProfile {
   stage?: string;
   documents: Document[];
   sessions: SessionComment[];
+  accessRequests: AccessRequest[];
 }
 
 export interface ConsultantProfile {
@@ -43,6 +54,7 @@ export interface ConsultantProfile {
   qualificationNumber: string;
   totalExperience: number; // years
   specializationField: string;
+  attendedUsers: { userId: string; name: string; lastViewed: string }[];
 }
 
 export interface AdminProfile {

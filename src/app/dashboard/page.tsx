@@ -3,11 +3,12 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircle, CheckCircle2 } from 'lucide-react';
-import type { EndUserProfile, SessionComment } from '@/lib/types';
+import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircle, CheckCircle2, History } from 'lucide-react';
+import type { EndUserProfile, SessionComment, ConsultantProfile } from '@/lib/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { endUserProfiles, consultantProfiles } from '@/lib/mockData';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   };
 
   const endUserProfile = user.role === 'enduser' ? user.profile as EndUserProfile : null;
+  const consultantProfile = user.role === 'consultant' ? user.profile as ConsultantProfile : null;
 
   return (
     <div className="space-y-6">
@@ -131,6 +133,46 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">Resolved support queries</p>
               </CardContent>
             </Card>
+          </CardContent>
+        </Card>
+      )}
+      
+      {user.role === 'consultant' && consultantProfile && (
+         <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              <div className="flex items-center">
+                <History className="mr-2 h-5 w-5 text-primary" />
+                User Attendance History
+              </div>
+            </CardTitle>
+            <CardDescription>
+              A log of the user profiles you have recently viewed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             {consultantProfile.attendedUsers && consultantProfile.attendedUsers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User Name</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead className="text-right">Last Viewed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {consultantProfile.attendedUsers.slice().reverse().map((record) => (
+                      <TableRow key={record.userId}>
+                        <TableCell className="font-medium">{record.name}</TableCell>
+                        <TableCell>{record.userId}</TableCell>
+                        <TableCell className="text-right">{format(new Date(record.lastViewed), "MMM d, yyyy")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+             ) : (
+                <p className="text-center text-muted-foreground py-4">You have not viewed any user profiles yet.</p>
+             )}
           </CardContent>
         </Card>
       )}
