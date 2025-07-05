@@ -30,7 +30,7 @@ export default function DashboardPage() {
       case 'admin':
         return `Welcome, ${(user.profile as any).name}! Oversee the platform and manage users.`;
       default:
-        return 'Welcome to Profile Hub!';
+        return 'Welcome to MyDocula!';
     }
   };
 
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Profile Hub</CardTitle>
+          <CardTitle className="text-2xl">Welcome to MyDocula</CardTitle>
           <CardDescription>{getWelcomeMessage()}</CardDescription>
         </CardHeader>
         <CardContent>

@@ -4,7 +4,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Profile Hub',
+  title: 'MyDocula',
   description: 'Centralized Profile Server Platform',
 };
 

@@ -53,7 +53,7 @@ export function LoginForm() {
       <CardHeader className="items-center text-center">
         <AppLogo size="lg" />
         <CardTitle className="text-2xl font-bold mt-4">Welcome Back</CardTitle>
-        <CardDescription>Sign in to access your Profile Hub account.</CardDescription>
+        <CardDescription>Sign in to access your MyDocula account.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>

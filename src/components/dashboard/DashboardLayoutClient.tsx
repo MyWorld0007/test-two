@@ -115,7 +115,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
         </SidebarContent>
         <SidebarFooter className="p-4 mt-auto">
            <div className="group-data-[collapsible=icon]:hidden">
-             <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Profile Hub</p>
+             <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} MyDocula</p>
            </div>
         </SidebarFooter>
       </Sidebar>

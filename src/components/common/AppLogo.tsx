@@ -5,9 +5,9 @@ export function AppLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const textSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-2xl' : 'text-xl';
 
   return (
-    <div className="flex items-center gap-2" aria-label="Profile Hub Logo">
+    <div className="flex items-center gap-2" aria-label="MyDocula Logo">
       <Building2 className={`${iconSize} text-primary`} />
-      <h1 className={`${textSize} font-bold text-primary`}>Profile Hub</h1>
+      <h1 className={`${textSize} font-bold text-primary`}>MyDocula</h1>
     </div>
   );
 }
