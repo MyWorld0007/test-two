@@ -1,4 +1,4 @@
-import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus, DocumentCategory } from './types';
+import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus, DocumentCategory, InsurancePolicy } from './types';
 
 export const demoEndUser: EndUserProfile = {
   userId: 'user1',
@@ -60,6 +60,31 @@ export const mockUsersDatabase: Record<string, { passwordHash: string; role: Use
 
 export let endUserProfiles: EndUserProfile[] = [demoEndUser];
 export let consultantProfiles: ConsultantProfile[] = [demoConsultant];
+export let insurancePolicies: InsurancePolicy[] = [
+  {
+    id: 'ins_1',
+    companyName: 'SecureHealth Inc.',
+    policyType: 'Family Floater',
+    insuredAmount: 500000,
+    policyDocument: {
+      name: 'policy_sh_ff.pdf',
+      url: '#',
+    },
+    createdAt: new Date('2023-05-10T10:00:00Z').toISOString(),
+  },
+  {
+    id: 'ins_2',
+    companyName: 'VitaSure Assurance',
+    policyType: 'Individual Health Plan',
+    insuredAmount: 1000000,
+    policyDocument: {
+      name: 'vs_individual.pdf',
+      url: '#',
+    },
+    createdAt: new Date('2023-08-20T14:30:00Z').toISOString(),
+  }
+];
+
 
 // Helper function to update mock data (e.g., after profile edit or document upload)
 export const updateEndUserProfile = (updatedProfile: EndUserProfile) => {
@@ -194,3 +219,18 @@ export const addCommentToUserSession = (userId: string, comment: SessionComment)
     updateEndUserProfile(userProfile);
   }
 };
+
+export const addInsurancePolicy = (policy: Omit<InsurancePolicy, 'id' | 'createdAt'>) => {
+  const newPolicy: InsurancePolicy = {
+    ...policy,
+    id: `ins_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  insurancePolicies.push(newPolicy);
+  return newPolicy;
+};
+
+export const deleteInsurancePolicy = (policyId: string) => {
+    insurancePolicies = insurancePolicies.filter(p => p.id !== policyId);
+    return true;
+}

@@ -73,3 +73,15 @@ export interface AuthenticatedUser {
   role: UserRole;
   profile: EndUserProfile | ConsultantProfile | AdminProfile;
 }
+
+export interface InsurancePolicy {
+  id: string;
+  companyName: string;
+  policyType: string;
+  insuredAmount: number;
+  policyDocument: {
+    name: string;
+    url: string;
+  };
+  createdAt: string;
+}

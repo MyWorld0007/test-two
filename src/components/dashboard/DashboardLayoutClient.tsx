@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/common/AppLogo';
-import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 
 interface NavItem {
@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/admin/users', label: 'Manage Users', icon: Users, roles: ['admin'] },
   { href: '/dashboard/admin/consultants', label: 'Manage Consultants', icon: Briefcase, roles: ['admin'] },
   { href: '/dashboard/admin/access', label: 'Access Control', icon: ShieldAlert, roles: ['admin'] },
+  { href: '/dashboard/admin/insurance', label: 'Insurance', icon: Landmark, roles: ['admin'] },
 ];
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
