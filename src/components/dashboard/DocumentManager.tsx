@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ChangeEvent } from 'react';
@@ -6,22 +5,26 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import type { Document as DocumentType, EndUserProfile } from '@/lib/types';
+import type { Document as DocumentType, EndUserProfile, DocumentCategory } from '@/lib/types';
 import { scanDocument } from '@/ai/flows/scan-document';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download, FileJson2 } from 'lucide-react';
+import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download, FileJson2, Folder } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
 
 export function DocumentManager() {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>('Other');
   const [isUploading, setIsUploading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
@@ -52,20 +55,21 @@ export function DocumentManager() {
       return;
     }
     setIsUploading(true);
-    // Mock upload
+    
     const newDocument: DocumentType = {
       id: `doc_${Date.now()}`,
       name: selectedFile.name,
       url: URL.createObjectURL(selectedFile), // For local preview, real app would use S3 URL
       uploadedAt: new Date().toISOString(),
+      category: selectedCategory,
     };
 
     const updatedDocuments = [...documents, newDocument];
     updateUserProfile({ ...userProfile, documents: updatedDocuments });
-    setDocuments(updatedDocuments); // Update local state
-    setSelectedFile(null); // Reset file input
+    setDocuments(updatedDocuments); 
+    setSelectedFile(null); 
+    setSelectedCategory('Other');
     
-    // Reset the actual file input element
     const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     if (fileInput) {
         fileInput.value = '';
@@ -89,14 +93,12 @@ export function DocumentManager() {
         const summary = result.summary;
         setSummaryResult(summary);
 
-        // Update document with the summary in the main state
         const updatedDocs = documents.map(d =>
             d.id === doc.id ? { ...d, summary: summary } : d
         );
         updateUserProfile({ ...userProfile, documents: updatedDocs });
         setDocuments(updatedDocs);
         
-        // Also update the viewing document state directly to reflect the change
         setViewingDocument(prev => prev ? { ...prev, summary: summary } : null);
 
         toast({ title: "Summarization Successful", description: "Document summary has been generated." });
@@ -115,7 +117,6 @@ export function DocumentManager() {
 
     let textToSummarize = doc.extractedText;
 
-    // Step 1: Scan document if text doesn't exist
     if (!textToSummarize) {
       if (!doc.url.startsWith('blob:')) {
         toast({
@@ -146,7 +147,6 @@ export function DocumentManager() {
         const scanResult = await scanDocument({ documentDataUri: base64data });
         textToSummarize = scanResult.extractedText;
         
-        // Update document in local state to reflect extracted text
         const updatedDocsWithText = documents.map((d) =>
           d.id === doc.id ? { ...d, extractedText: textToSummarize } : d
         );
@@ -159,7 +159,7 @@ export function DocumentManager() {
           description: 'Could not extract text from the document. Please try again.',
           variant: 'destructive',
         });
-        return; // Stop if scanning fails
+        return; 
       }
     }
 
@@ -168,12 +168,10 @@ export function DocumentManager() {
       return;
     }
 
-    // Step 2: Summarize the text
     try {
       const summaryResultText = await summarizeText({ textToSummarize });
       const summary = summaryResultText.summary;
 
-      // Update document with summary and persist to profile
       const finalUpdatedDocs = documents.map((d) =>
         d.id === doc.id ? { ...d, extractedText: textToSummarize, summary } : d
       );
@@ -185,7 +183,6 @@ export function DocumentManager() {
         description: 'The document has been successfully summarized.',
       });
 
-      // Open the dialog to show the final result
       const finalDoc = finalUpdatedDocs.find(d => d.id === doc.id);
       if (finalDoc) {
         setViewingDocument(finalDoc);
@@ -218,16 +215,36 @@ export function DocumentManager() {
     setDocuments(updatedDocs);
     toast({ title: "Document Deleted", description: "The document has been removed." });
   };
+  
+  const documentCategories: DocumentCategory[] = ['Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'];
+  const groupedDocuments = documents.reduce((acc, doc) => {
+    const category = doc.category || 'Other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(doc);
+    return acc;
+  }, {} as Record<DocumentCategory, DocumentType[]>);
 
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Upload New Document</CardTitle>
-          <CardDescription>Select a file and upload it to your profile.</CardDescription>
+          <CardDescription>Select a file and a category, then upload it to your profile.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-4">
           <Input id="file-upload" type="file" onChange={handleFileChange} className="flex-grow" aria-label="Choose file"/>
+          <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as DocumentCategory)}>
+              <SelectTrigger className="w-full sm:w-[220px]">
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {documentCategories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat} Document</SelectItem>
+                ))}
+              </SelectContent>
+          </Select>
           <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="w-full sm:w-auto">
             {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
             Upload
@@ -238,61 +255,76 @@ export function DocumentManager() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>My Documents</CardTitle>
-          <CardDescription>View, manage, and summarize your uploaded documents.</CardDescription>
+          <CardDescription>View and manage your uploaded documents by category.</CardDescription>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No documents uploaded yet.</p>
           ) : (
-            <ScrollArea className="h-96">
-              <ul className="space-y-3 pr-4">
-                {documents.map((doc) => (
-                  <li key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <FileText className="h-6 w-6 text-primary flex-shrink-0" />
-                      <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
-                    </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <Button variant="outline" size="icon" title="View Document Summary" onClick={() => { setViewingDocument(doc); setSummaryResult(doc.summary || null); }}>
-                        <ScanLine className="h-4 w-4" />
-                      </Button>
-                       <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
-                        <FileJson2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" title="Delete Document">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the document "{doc.name}".
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteDocument(doc.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                       {doc.url.startsWith('blob:') && (
-                         <Button variant="outline" size="icon" title="Download Document" asChild>
-                           <a href={doc.url} download={doc.name}>
-                             <Download className="h-4 w-4" />
-                           </a>
-                         </Button>
-                       )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
+            <Accordion type="multiple" className="w-full" defaultValue={documentCategories.filter(cat => groupedDocuments[cat]?.length > 0)}>
+              {documentCategories.map(category => (
+                groupedDocuments[category] && groupedDocuments[category].length > 0 && (
+                  <AccordionItem value={category} key={category}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3">
+                        <Folder className="h-5 w-5 text-accent" />
+                        <span className="font-semibold text-base">{category}</span>
+                        <Badge variant="secondary">{groupedDocuments[category].length}</Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="space-y-3 pt-2">
+                        {groupedDocuments[category].map(doc => (
+                          <li key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <FileText className="h-6 w-6 text-primary flex-shrink-0" />
+                              <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
+                            </div>
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <Button variant="outline" size="icon" title="View Document Summary" onClick={() => { setViewingDocument(doc); setSummaryResult(doc.summary || null); }}>
+                                <ScanLine className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
+                                <FileJson2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="icon" title="Delete Document">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete the document "{doc.name}".
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteDocument(doc.id)}>Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              {doc.url.startsWith('blob:') && (
+                                <Button variant="outline" size="icon" title="Download Document" asChild>
+                                  <a href={doc.url} download={doc.name}>
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                )
+              ))}
+            </Accordion>
           )}
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus } from './types';
+import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus, DocumentCategory } from './types';
 
 export const demoEndUser: EndUserProfile = {
   userId: 'user1',
@@ -13,8 +13,8 @@ export const demoEndUser: EndUserProfile = {
   diseName: 'Hypertension',
   stage: 'Stage 2',
   documents: [
-    { id: 'doc1', name: 'Medical Report 1.pdf', url: '#', uploadedAt: new Date().toISOString(), extractedText: 'Sample extracted text for Medical Report 1.' },
-    { id: 'doc2', name: 'Lab Results.png', url: '#', uploadedAt: new Date().toISOString() },
+    { id: 'doc1', name: 'Medical Report 1.pdf', url: '#', uploadedAt: new Date().toISOString(), category: 'Clinical', extractedText: 'Sample extracted text for Medical Report 1.' },
+    { id: 'doc2', name: 'Lab Results.png', url: '#', uploadedAt: new Date().toISOString(), category: 'Lab' },
   ],
   sessions: [
     { id: 'session1', consultantId: 'consultant1', consultantName: 'Dr. Alice Smith', comment: 'Patient is responding well to treatment.', timestamp: new Date().toISOString() }

@@ -11,11 +11,14 @@ export interface AccessRequest {
   rejectionCount?: number;
 }
 
+export type DocumentCategory = 'Lab' | 'Clinical' | 'Hospital' | 'Estimate' | 'Other';
+
 export interface Document {
   id: string;
   name: string;
   url: string; // For mock, this could be a placeholder or data URI
   uploadedAt: string;
+  category: DocumentCategory;
   extractedText?: string;
   summary?: string;
 }
