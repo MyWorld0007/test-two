@@ -14,7 +14,6 @@ import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download, FileJson2, Folder } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
@@ -24,7 +23,6 @@ export function DocumentManager() {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>('Other');
   const [isUploading, setIsUploading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
@@ -55,60 +53,44 @@ export function DocumentManager() {
       return;
     }
     setIsUploading(true);
-    
-    const newDocument: DocumentType = {
-      id: `doc_${Date.now()}`,
-      name: selectedFile.name,
-      url: URL.createObjectURL(selectedFile), // For local preview, real app would use S3 URL
-      uploadedAt: new Date().toISOString(),
-      category: selectedCategory,
-    };
-
-    const updatedDocuments = [...documents, newDocument];
-    updateUserProfile({ ...userProfile, documents: updatedDocuments });
-    setDocuments(updatedDocuments); 
-    setSelectedFile(null); 
-    setSelectedCategory('Other');
-    
-    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-    if (fileInput) {
-        fileInput.value = '';
-    }
-
-    setIsUploading(false);
-    toast({ title: "Upload Successful", description: `${newDocument.name} has been uploaded.` });
-  };
-  
-  const handleSummarizeDocument = async (doc: DocumentType) => {
-    if (!doc.extractedText) {
-        toast({ title: "Summarization Error", description: "Document must be scanned first to extract text.", variant: "destructive" });
-        return;
-    }
-
-    setIsSummarizing(true);
-    setSummaryResult(null);
+    toast({ title: "Uploading & Categorizing...", description: "Please wait while we process your document." });
 
     try {
-        const result = await summarizeText({ textToSummarize: doc.extractedText });
-        const summary = result.summary;
-        setSummaryResult(summary);
+        const base64data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(selectedFile);
+        });
 
-        const updatedDocs = documents.map(d =>
-            d.id === doc.id ? { ...d, summary: summary } : d
-        );
-        updateUserProfile({ ...userProfile, documents: updatedDocs });
-        setDocuments(updatedDocs);
+        const scanResult = await scanDocument({ documentDataUri: base64data });
+
+        const newDocument: DocumentType = {
+          id: `doc_${Date.now()}`,
+          name: selectedFile.name,
+          url: URL.createObjectURL(selectedFile), // For local preview
+          uploadedAt: new Date().toISOString(),
+          category: scanResult.category,
+          extractedText: scanResult.extractedText,
+        };
+
+        const updatedDocuments = [...documents, newDocument];
+        updateUserProfile({ ...userProfile, documents: updatedDocuments });
+        setDocuments(updatedDocuments); 
+        setSelectedFile(null); 
         
-        setViewingDocument(prev => prev ? { ...prev, summary: summary } : null);
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
 
-        toast({ title: "Summarization Successful", description: "Document summary has been generated." });
+        toast({ title: "Upload Successful", description: `${newDocument.name} has been automatically categorized as '${newDocument.category}'.` });
 
-    } catch (e) {
-        console.error("Summarization Error:", e);
-        toast({ title: "Summarization Failed", description: (e as Error).message || "Could not summarize the document.", variant: "destructive" });
-        setSummaryResult("Failed to generate summary.");
+    } catch (error) {
+        console.error("Upload and Scan Error:", error);
+        toast({ title: "Processing Failed", description: "Could not automatically categorize the document. Please try again.", variant: "destructive" });
     } finally {
-        setIsSummarizing(false);
+        setIsUploading(false);
     }
   };
   
@@ -147,9 +129,11 @@ export function DocumentManager() {
         const scanResult = await scanDocument({ documentDataUri: base64data });
         textToSummarize = scanResult.extractedText;
         
+        // Update document with extracted text and AI-determined category
         const updatedDocsWithText = documents.map((d) =>
-          d.id === doc.id ? { ...d, extractedText: textToSummarize } : d
+          d.id === doc.id ? { ...d, extractedText: textToSummarize, category: scanResult.category } : d
         );
+        updateUserProfile({ ...userProfile, documents: updatedDocsWithText });
         setDocuments(updatedDocsWithText);
 
       } catch (e) {
@@ -169,6 +153,10 @@ export function DocumentManager() {
     }
 
     try {
+      setIsSummarizing(true);
+      setViewingDocument(doc);
+      setSummaryResult(null);
+
       const summaryResultText = await summarizeText({ textToSummarize });
       const summary = summaryResultText.summary;
 
@@ -196,6 +184,9 @@ export function DocumentManager() {
         description: (e as Error).message || 'Could not summarize the document.',
         variant: 'destructive',
       });
+      setSummaryResult("Failed to generate summary.");
+    } finally {
+        setIsSummarizing(false);
     }
   };
 
@@ -231,23 +222,13 @@ export function DocumentManager() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Upload New Document</CardTitle>
-          <CardDescription>Select a file and a category, then upload it to your profile.</CardDescription>
+          <CardDescription>Select a file to upload. It will be categorized automatically by AI.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-4">
           <Input id="file-upload" type="file" onChange={handleFileChange} className="flex-grow" aria-label="Choose file"/>
-          <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as DocumentCategory)}>
-              <SelectTrigger className="w-full sm:w-[220px]">
-                <SelectValue placeholder="Select category..." />
-              </SelectTrigger>
-              <SelectContent>
-                {documentCategories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat} Document</SelectItem>
-                ))}
-              </SelectContent>
-          </Select>
           <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="w-full sm:w-auto">
             {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-            Upload
+            Upload and Categorize
           </Button>
         </CardContent>
       </Card>
@@ -349,7 +330,7 @@ export function DocumentManager() {
                   <div className="flex flex-col items-center justify-center h-full text-center p-4">
                     <p className="text-muted-foreground">No summary available.</p>
                     {viewingDocument?.extractedText && !viewingDocument?.summary && (
-                      <Button onClick={() => viewingDocument && handleSummarizeDocument(viewingDocument)} disabled={isSummarizing} className="mt-4">
+                      <Button onClick={() => viewingDocument && handleScanAndSummarize(viewingDocument)} disabled={isSummarizing} className="mt-4">
                         {isSummarizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileJson2 className="mr-2 h-4 w-4" />}
                         Summarize with AI
                       </Button>

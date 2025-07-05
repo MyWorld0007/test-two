@@ -1,4 +1,4 @@
-// Scans documents using OCR to extract text for digital storage.
+// Scans documents using OCR to extract text and categorize them for digital storage.
 
 'use server';
 
@@ -18,6 +18,8 @@ const ScanDocumentOutputSchema = z.object({
   extractedText: z
     .string()
     .describe('The extracted text content from the document.'),
+  category: z.enum(['Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'])
+    .describe('The determined category of the document.'),
 });
 export type ScanDocumentOutput = z.infer<typeof ScanDocumentOutputSchema>;
 
@@ -35,11 +37,10 @@ const tesseractTool = ai.defineTool({
   }),
   outputSchema: z.string(),
   async handler(input) {
-    // Placeholder implementation for Tesseract OCR.  Replace with actual OCR call.
-    // In a real application, this would call Tesseract.js or a similar OCR service.
-    // For this example, we'll just return a placeholder text.
-    console.log('Calling tesseract tool with ', input.documentDataUri);
-    return `OCR Result: This is a sample extracted text from the document. Replace this with real OCR output.`;
+    // Placeholder implementation for Tesseract OCR.
+    // For this example, we'll return a placeholder text that implies a lab report to aid categorization.
+    console.log('Calling tesseract tool with ', input.documentDataUri.substring(0, 50) + '...');
+    return `OCR Result: Patient: John Doe. Blood Test Results. Hemoglobin: 14.5 g/dL. White Blood Cell Count: 7.2 x 10^9/L. This is a sample extracted text from a lab report document.`;
   },
 });
 
@@ -48,11 +49,17 @@ const scanDocumentPrompt = ai.definePrompt({
   input: {schema: ScanDocumentInputSchema},
   output: {schema: ScanDocumentOutputSchema},
   tools: [tesseractTool],
-  prompt: `You are a document processing expert. Extract the text from the document using the available tools.
+  prompt: `You are a document processing expert specializing in medical records. Your job is to extract text from a document and classify it into one of the following categories: 'Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'.
+
+  - 'Lab': For laboratory test results.
+  - 'Clinical': For doctor's notes, clinical summaries, or prescriptions.
+  - 'Hospital': For hospital admission/discharge papers, or surgical reports.
+  - 'Estimate': For billing estimates or insurance pre-authorizations.
+  - 'Other': For any document that does not fit the above categories.
+
+  Use the 'tesseract' tool to extract the text from the document provided. Based on the extracted text, determine the most appropriate category and return both the text and the category.
 
   Document: {{media url=documentDataUri}}
-
-  Use the 'tesseract' tool to extract the text from the document. Return the extracted text.
   `,
 });
 
