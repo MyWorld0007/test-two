@@ -8,6 +8,7 @@ export interface AccessRequest {
   consultantName: string;
   status: AccessRequestStatus;
   requestedAt: string;
+  rejectionCount?: number;
 }
 
 export interface Document {

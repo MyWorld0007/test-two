@@ -9,11 +9,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, AccessRequestStatus } from '@/lib/types';
-import { endUserProfiles, addCommentToUserSession, addAccessRequest } from '@/lib/mockData';
+import { endUserProfiles, addCommentToUserSession, handleConsultantRequestAccess } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const MAX_REJECTIONS = 3;
 
 export function UserSearchAndDisplay() {
   const { user: consultantUser, updateUserProfile } = useAuth();
@@ -23,13 +25,13 @@ export function UserSearchAndDisplay() {
   const [comment, setComment] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [accessStatus, setAccessStatus] = useState<AccessRequestStatus | 'none'>('none');
+  const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
   useEffect(() => {
-    if (accessStatus === 'approved' && foundUser && consultantUser) {
+    if (accessRequest?.status === 'approved' && foundUser && consultantUser) {
       const existingEntry = consultantProfile.attendedUsers?.find(u => u.userId === foundUser.userId);
       const newEntry = {
         userId: foundUser.userId,
@@ -47,7 +49,7 @@ export function UserSearchAndDisplay() {
       updateUserProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessStatus, foundUser]);
+  }, [accessRequest, foundUser]);
 
   const handleSearch = () => {
     if (!searchId.trim() || !consultantUser) {
@@ -56,18 +58,14 @@ export function UserSearchAndDisplay() {
     }
     setIsSearching(true);
     setFoundUser(null);
-    setAccessStatus('none');
+    setAccessRequest(null);
 
     setTimeout(() => { // Simulate API delay
       const user = endUserProfiles.find(p => p.uniqueId.toLowerCase() === searchId.toLowerCase().trim());
       if (user) {
         setFoundUser(user);
-        const request = user.accessRequests?.find(r => r.consultantId === consultantUser.id);
-        if (request) {
-          setAccessStatus(request.status);
-        } else {
-          setAccessStatus('none');
-        }
+        const request = user.accessRequests?.find(r => r.consultantId === consultantUser.id) || null;
+        setAccessRequest(request);
       } else {
         toast({ title: "Not Found", description: `No user found with Unique ID: ${searchId}.`, variant: "destructive" });
       }
@@ -79,19 +77,16 @@ export function UserSearchAndDisplay() {
     if (!foundUser || !consultantUser) return;
     setIsLoadingAccess(true);
 
-    const newRequest: AccessRequest = {
-      requestId: `req_${Date.now()}`,
-      consultantId: consultantUser.id,
-      consultantName: `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`,
-      status: 'pending',
-      requestedAt: new Date().toISOString(),
-    };
+    const result = handleConsultantRequestAccess(foundUser.userId, consultantUser.id, `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`);
     
-    addAccessRequest(foundUser.userId, newRequest);
-    setFoundUser(prev => prev ? {...prev, accessRequests: [...(prev.accessRequests || []), newRequest]} : null);
-    setAccessStatus('pending');
+    if (result.success) {
+      setAccessRequest(result.request);
+      toast({ title: "Request Sent", description: "Your access request has been sent to the user." });
+    } else {
+      toast({ title: "Request Failed", description: result.message, variant: "destructive" });
+    }
+
     setIsLoadingAccess(false);
-    toast({ title: "Request Sent", description: "Your access request has been sent to the user." });
   }
 
   const handleAddComment = () => {
@@ -120,7 +115,10 @@ export function UserSearchAndDisplay() {
   const renderAccessContent = () => {
     if (!foundUser) return null;
 
-    switch (accessStatus) {
+    const status = accessRequest?.status || 'none';
+    const rejectionCount = accessRequest?.rejectionCount || 0;
+
+    switch (status) {
       case 'approved':
         return renderUserProfile();
       case 'pending':
@@ -132,12 +130,28 @@ export function UserSearchAndDisplay() {
           </Alert>
         );
       case 'declined':
+        if (rejectionCount >= MAX_REJECTIONS) {
+          return (
+            <Alert variant="destructive">
+              <ShieldBan className="h-4 w-4" />
+              <AlertTitle>Request Limit Reached</AlertTitle>
+              <AlertDescription>You have been declined {rejectionCount} times. Please contact an administrator for assistance.</AlertDescription>
+            </Alert>
+          );
+        }
         return (
-           <Alert variant="destructive">
-            <ShieldX className="h-4 w-4" />
-            <AlertTitle>Access Declined</AlertTitle>
-            <AlertDescription>The user has declined your request to access their profile.</AlertDescription>
-          </Alert>
+           <Card className="text-center">
+            <CardHeader>
+               <CardTitle className="flex items-center justify-center"><ShieldX className="h-6 w-6 mr-2 text-destructive"/> Access Declined</CardTitle>
+              <CardDescription>Your previous request was declined. You have {MAX_REJECTIONS - rejectionCount} attempts remaining.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleRequestAccess} disabled={isLoadingAccess} variant="secondary">
+                {isLoadingAccess ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                Re-request Access
+              </Button>
+            </CardContent>
+          </Card>
         );
       case 'none':
         return (

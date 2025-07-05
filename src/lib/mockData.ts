@@ -82,31 +82,73 @@ export const updateConsultantProfile = (updatedProfile: ConsultantProfile) => {
   }
 };
 
-export const addAccessRequest = (userId: string, request: AccessRequest) => {
+export const handleConsultantRequestAccess = (userId: string, consultantId: string, consultantName: string): { success: boolean; request: AccessRequest | null; message: string } => {
   const userProfile = endUserProfiles.find(p => p.userId === userId);
-  if (userProfile) {
-    // Avoid adding duplicate pending requests from the same consultant
-    const existingRequest = userProfile.accessRequests.find(
-      r => r.consultantId === request.consultantId && r.status === 'pending'
-    );
-    if (!existingRequest) {
-      userProfile.accessRequests.push(request);
-      updateEndUserProfile(userProfile);
-    }
+  if (!userProfile) {
+    return { success: false, request: null, message: "User not found." };
   }
+
+  let request = userProfile.accessRequests.find(r => r.consultantId === consultantId);
+
+  if (request) {
+    // Request already exists, check status
+    if (request.status === 'pending' || request.status === 'approved') {
+      return { success: false, request, message: `A request is already ${request.status}.` };
+    }
+    // It must be declined, check rejection count
+    if ((request.rejectionCount || 0) >= 3) {
+      return { success: false, request, message: "Request limit reached after 3 rejections." };
+    }
+    // Re-requesting
+    request.status = 'pending';
+    request.requestedAt = new Date().toISOString();
+  } else {
+    // No request exists, create a new one
+    request = {
+      requestId: `req_${Date.now()}`,
+      consultantId: consultantId,
+      consultantName: consultantName,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+      rejectionCount: 0,
+    };
+    userProfile.accessRequests.push(request);
+  }
+
+  updateEndUserProfile(userProfile);
+  return { success: true, request, message: "Request sent successfully." };
 };
+
 
 export const updateAccessRequest = (userId: string, requestId: string, newStatus: AccessRequestStatus) => {
   const userProfile = endUserProfiles.find(p => p.userId === userId);
   if (userProfile) {
     const requestIndex = userProfile.accessRequests.findIndex(r => r.requestId === requestId);
     if (requestIndex !== -1) {
-      userProfile.accessRequests[requestIndex].status = newStatus;
+      const request = userProfile.accessRequests[requestIndex];
+      // Increment rejection count only when moving to declined status
+      if (newStatus === 'declined' && request.status !== 'declined') {
+        request.rejectionCount = (request.rejectionCount || 0) + 1;
+      }
+      request.status = newStatus;
       updateEndUserProfile(userProfile);
       return true;
     }
   }
   return false;
+};
+
+export const resetRejectionCount = (userId: string, requestId: string) => {
+    const userProfile = endUserProfiles.find(p => p.userId === userId);
+    if (userProfile) {
+        const request = userProfile.accessRequests.find(r => r.requestId === requestId);
+        if (request) {
+            request.rejectionCount = 0;
+            updateEndUserProfile(userProfile);
+            return true;
+        }
+    }
+    return false;
 };
 
 export const grantConsultantAccess = (userId: string, consultantId: string) => {
@@ -126,6 +168,7 @@ export const grantConsultantAccess = (userId: string, consultantId: string) => {
               consultantName: `${consultantProfile.firstName} ${consultantProfile.lastName}`,
               status: 'approved',
               requestedAt: new Date().toISOString(),
+              rejectionCount: 0,
           };
           userProfile.accessRequests.push(newRequest);
       }

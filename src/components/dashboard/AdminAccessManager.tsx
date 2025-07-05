@@ -2,14 +2,14 @@
 'use client';
 
 import { useState } from 'react';
-import { endUserProfiles, consultantProfiles, grantConsultantAccess, updateAccessRequest } from '@/lib/mockData';
+import { endUserProfiles, consultantProfiles, grantConsultantAccess, updateAccessRequest, resetRejectionCount } from '@/lib/mockData';
 import type { EndUserProfile, ConsultantProfile, AccessRequest, AccessRequestStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldPlus, Check, X, Clock, Loader2, User, Briefcase, ShieldCheck, ShieldX, KeyRound } from 'lucide-react';
+import { ShieldPlus, Check, X, Clock, Loader2, User, Briefcase, ShieldCheck, ShieldX, KeyRound, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -61,6 +61,17 @@ export function AdminAccessManager() {
   const handleRevokeAccess = (userId: string, request: AccessRequest) => {
     handleStatusChange(userId, request.requestId, 'declined');
   };
+  
+  const handleResetRejections = (userId: string, requestId: string) => {
+    const success = resetRejectionCount(userId, requestId);
+    if (success) {
+      toast({ title: "Rejections Reset", description: "The consultant's rejection count for this user has been reset." });
+      forceRerender();
+    } else {
+      toast({ title: "Reset Failed", description: "Could not reset the rejection count.", variant: "destructive" });
+    }
+  };
+
 
   const requestsByConsultant = consultantProfiles.map(consultant => {
     const requests = endUserProfiles.flatMap(user =>
@@ -184,6 +195,7 @@ export function AdminAccessManager() {
                             <TableRow>
                               <TableHead>User</TableHead>
                               <TableHead>Requested On</TableHead>
+                              <TableHead>Rejections</TableHead>
                               <TableHead className="text-right">Status / Action</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -192,20 +204,28 @@ export function AdminAccessManager() {
                               <TableRow key={req.requestId}>
                                 <TableCell>{req.userName}</TableCell>
                                 <TableCell>{format(new Date(req.requestedAt), 'PPP')}</TableCell>
+                                <TableCell className="text-center">{req.rejectionCount || 0}</TableCell>
                                 <TableCell className="text-right">
-                                  <Select 
-                                    value={req.status} 
-                                    onValueChange={(newStatus) => handleStatusChange(req.userId, req.requestId, newStatus as AccessRequestStatus)}
-                                  >
-                                    <SelectTrigger className="w-36 float-right">
-                                      <SelectValue placeholder="Set Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="approved"><Check className="inline-block mr-2 h-4 w-4 text-primary" />Approved</SelectItem>
-                                      <SelectItem value="pending"><Clock className="inline-block mr-2 h-4 w-4 text-muted-foreground" />Pending</SelectItem>
-                                      <SelectItem value="declined"><X className="inline-block mr-2 h-4 w-4 text-destructive" />Declined</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <div className="flex items-center justify-end gap-2">
+                                    {req.status === 'declined' && (req.rejectionCount || 0) > 0 && (
+                                       <Button size="sm" variant="ghost" onClick={() => handleResetRejections(req.userId, req.requestId)} title="Reset Rejection Count">
+                                          <RotateCcw className="h-4 w-4" />
+                                       </Button>
+                                    )}
+                                    <Select 
+                                      value={req.status} 
+                                      onValueChange={(newStatus) => handleStatusChange(req.userId, req.requestId, newStatus as AccessRequestStatus)}
+                                    >
+                                      <SelectTrigger className="w-36">
+                                        <SelectValue placeholder="Set Status" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="approved"><Check className="inline-block mr-2 h-4 w-4 text-primary" />Approved</SelectItem>
+                                        <SelectItem value="pending"><Clock className="inline-block mr-2 h-4 w-4 text-muted-foreground" />Pending</SelectItem>
+                                        <SelectItem value="declined"><X className="inline-block mr-2 h-4 w-4 text-destructive" />Declined</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
