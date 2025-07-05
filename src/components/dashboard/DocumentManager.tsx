@@ -13,7 +13,7 @@ import type { Document as DocumentType, EndUserProfile, DocumentCategory } from 
 import { scanDocument } from '@/ai/flows/scan-document';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, UploadCloud, Edit2, Trash2, Loader2, Download, FileJson2, Folder, ExternalLink } from 'lucide-react';
+import { FileText, UploadCloud, Edit2, Trash2, Loader2, Download, FileJson2, Folder, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ export function DocumentManager() {
   const [viewingDocument, setViewingDocument] = useState<DocumentType | null>(null);
   const [editingDocument, setEditingDocument] = useState<DocumentType | null>(null);
   const [newFileName, setNewFileName] = useState('');
+  const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   useEffect(() => {
     if (user?.role === 'enduser') {
@@ -260,14 +261,12 @@ export function DocumentManager() {
                             </div>
                             <div className="flex gap-1.5 flex-shrink-0">
                                {doc.url.startsWith('blob:') ? (
-                                <Button variant="outline" size="icon" title="View Document" asChild>
-                                  <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="h-4 w-4" />
-                                  </a>
+                                <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                               ) : (
                                 <Button variant="outline" size="icon" title="Preview not available for mock data" disabled>
-                                  <ExternalLink className="h-4 w-4" />
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                               )}
                               <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
@@ -349,7 +348,6 @@ export function DocumentManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog for renaming document */}
       <Dialog open={!!editingDocument} onOpenChange={(isOpen) => !isOpen && setEditingDocument(null)}>
         <DialogContent>
           <DialogHeader>
@@ -365,6 +363,25 @@ export function DocumentManager() {
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
             <Button onClick={handleRenameDocument}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!documentToPreview} onOpenChange={(isOpen) => !isOpen && setDocumentToPreview(null)}>
+        <DialogContent className="max-w-4xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{documentToPreview?.name}</DialogTitle>
+            <DialogDescription>
+              Document Preview
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-full py-4">
+             {documentToPreview?.url && (
+                <iframe src={documentToPreview.url} className="w-full h-full border rounded-md" title={documentToPreview.name} />
+             )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
