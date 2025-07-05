@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ChangeEvent } from 'react';
@@ -12,7 +13,7 @@ import type { Document as DocumentType, EndUserProfile, DocumentCategory } from 
 import { scanDocument } from '@/ai/flows/scan-document';
 import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, UploadCloud, Edit2, ScanLine, Trash2, Loader2, Download, FileJson2, Folder } from 'lucide-react';
+import { FileText, UploadCloud, Edit2, Trash2, Loader2, Download, FileJson2, Folder, ExternalLink } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,6 @@ export function DocumentManager() {
   const [viewingDocument, setViewingDocument] = useState<DocumentType | null>(null);
   const [editingDocument, setEditingDocument] = useState<DocumentType | null>(null);
   const [newFileName, setNewFileName] = useState('');
-  const [dialogContentMode, setDialogContentMode] = useState<'details' | 'summary'>('details');
 
   useEffect(() => {
     if (user?.role === 'enduser') {
@@ -154,7 +154,6 @@ export function DocumentManager() {
     try {
       setIsSummarizing(true);
       setViewingDocument(doc);
-      setDialogContentMode('summary');
 
       const summaryResultText = await summarizeText({ textToSummarize });
       const summary = summaryResultText.summary;
@@ -260,9 +259,17 @@ export function DocumentManager() {
                               <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
                             </div>
                             <div className="flex gap-1.5 flex-shrink-0">
-                              <Button variant="outline" size="icon" title="View Document Details" onClick={() => { setViewingDocument(doc); setDialogContentMode('details'); }}>
-                                <ScanLine className="h-4 w-4" />
-                              </Button>
+                               {doc.url.startsWith('blob:') ? (
+                                <Button variant="outline" size="icon" title="View Document" asChild>
+                                  <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              ) : (
+                                <Button variant="outline" size="icon" title="Preview not available for mock data" disabled>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
                                 <FileJson2 className="h-4 w-4" />
                               </Button>
@@ -311,51 +318,30 @@ export function DocumentManager() {
       <Dialog open={!!viewingDocument} onOpenChange={(isOpen) => { if (!isOpen) { setViewingDocument(null); } }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {dialogContentMode === 'details' ? 'Document Details' : 'AI Summary'}: {viewingDocument?.name}
-            </DialogTitle>
+            <DialogTitle>AI Summary: {viewingDocument?.name}</DialogTitle>
             <DialogDescription>
-              {dialogContentMode === 'details'
-                ? 'View the text extracted from your document.'
-                : 'View an AI-generated summary of your document in simple terms.'
-              }
+              View an AI-generated summary of your document in simple terms.
             </DialogDescription>
           </DialogHeader>
           
-          {dialogContentMode === 'details' ? (
-            <div className="max-h-[60vh] overflow-y-auto p-1">
-              <h3 className="font-semibold mb-2 text-lg">Extracted Text</h3>
-              <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
-                {viewingDocument?.extractedText ? (
-                  <pre className="whitespace-pre-wrap text-sm">{viewingDocument.extractedText}</pre>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                    <p className="text-muted-foreground">No text has been extracted from this document yet.</p>
-                    <p className="text-xs text-muted-foreground mt-2">Use the "Scan and Summarize" feature to extract text.</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-          ) : (
-            <div className="max-h-[60vh] overflow-y-auto p-1">
-              <h3 className="font-semibold mb-2 text-lg">AI Summary</h3>
-              <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
-                {isSummarizing ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2">Generating Summary...</p>
-                  </div>
-                ) : viewingDocument?.summary ? (
-                  <pre className="whitespace-pre-wrap text-sm">{viewingDocument.summary}</pre>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                    <p className="text-muted-foreground">No summary available for this document.</p>
-                    <p className="text-xs text-muted-foreground mt-2">Use the "Scan and Summarize" feature to generate one.</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-          )}
+          <div className="max-h-[60vh] overflow-y-auto p-1">
+            <h3 className="font-semibold mb-2 text-lg">AI Summary</h3>
+            <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
+              {isSummarizing ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Generating Summary...</p>
+                </div>
+              ) : viewingDocument?.summary ? (
+                <pre className="whitespace-pre-wrap text-sm">{viewingDocument.summary}</pre>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <p className="text-muted-foreground">No summary available for this document.</p>
+                  <p className="text-xs text-muted-foreground mt-2">Use the "Scan and Summarize" feature to generate one.</p>
+                </div>
+              )}
+            </ScrollArea>
+          </div>
 
           <DialogFooter className="mt-4">
             <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
