@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/common/AppLogo';
-import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark } from 'lucide-react';
+import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 
 interface NavItem {
@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/user/profile', label: 'My Profile', icon: User, roles: ['enduser'] },
   { href: '/dashboard/user/documents', label: 'My Documents', icon: FileText, roles: ['enduser'] },
   { href: '/dashboard/user/access', label: 'Access Control', icon: KeyRound, roles: ['enduser'] },
+  { href: '/dashboard/user/insurance', label: 'Insurance', icon: Umbrella, roles: ['enduser'] },
   { href: '/dashboard/consultant/profile', label: 'My Profile', icon: User, roles: ['consultant'] },
   { href: '/dashboard/consultant/view-user', label: 'View User', icon: Search, roles: ['consultant'] },
   { href: '/dashboard/admin/users', label: 'Manage Users', icon: Users, roles: ['admin'] },
