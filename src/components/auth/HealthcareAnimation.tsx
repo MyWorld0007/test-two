@@ -51,9 +51,7 @@ export function HealthcareAnimation({ animationType, symbolCount = 25 }: Healthc
           left: `${left}vw`,
           width: `${size}px`,
           height: `${size}px`,
-          animationName: animationName,
-          animationDuration: `${duration}s`,
-          animationDelay: `${delay}s`,
+          animation: `${animationName} ${duration}s linear ${delay}s infinite`,
         },
         className: 'healthcare-symbol'
       });

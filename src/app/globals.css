@@ -88,8 +88,6 @@
 @layer utilities {
   .healthcare-symbol {
     @apply absolute top-[-50px] text-primary/20;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
   }
 
   @keyframes fall {
