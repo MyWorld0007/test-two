@@ -55,7 +55,7 @@ export interface ConsultantProfile {
   consultantId: string;
   firstName: string;
   middleName?: string;
-  lastName:string;
+  lastName: string;
   email: string;
   qualification: string;
   qualificationNumber: string;
