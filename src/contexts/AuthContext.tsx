@@ -70,6 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'auth/invalid-email':
           message = 'Please enter a valid email address.';
           break;
+        case 'auth/operation-not-allowed':
+          message = 'Email/Password sign-in is not enabled for this project.';
+          break;
         default:
           message = 'Failed to log in. Please try again later.';
       }
@@ -89,8 +92,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Firebase Registration Error:", error);
       setIsLoading(false);
       let message = 'An unknown error occurred.';
-      if (error.code === 'auth/email-already-in-use') {
-        message = 'This email address is already in use.';
+       switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = 'This email address is already in use.';
+          break;
+        case 'auth/invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+        case 'auth/weak-password':
+            message = 'The password is too weak.';
+            break;
+        case 'auth/operation-not-allowed':
+          message = 'Email/Password sign-up is not enabled for this project.';
+          break;
+        default:
+          message = 'Failed to register. Please try again later.';
       }
       return { success: false, message };
     }
@@ -107,7 +123,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error: any) {
           console.error("Google Sign-In Error:", error);
           setIsLoading(false);
-          return { success: false, message: 'Failed to sign in with Google. Please try again.' };
+          let message = 'An unknown error occurred.';
+          switch(error.code) {
+            case 'auth/operation-not-allowed':
+              message = 'Google Sign-In is not enabled for this project.';
+              break;
+            case 'auth/popup-closed-by-user':
+              message = 'Sign-in window was closed before completion.';
+              break;
+            case 'auth/cancelled-popup-request':
+              message = 'Multiple sign-in windows were opened. Please try again.';
+              break;
+            default:
+              message = 'Failed to sign in with Google. Please try again later.';
+          }
+          return { success: false, message };
       }
   };
 
