@@ -7,11 +7,28 @@ import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircl
 import type { EndUserProfile, SessionComment, ConsultantProfile } from '@/lib/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { endUserProfiles, consultantProfiles } from '@/lib/mockData';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useEffect, useState } from 'react';
+import { getAllUsers } from '@/lib/firestore';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalConsultants, setTotalConsultants] = useState(0);
+  const [isKpiLoading, setIsKpiLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      const fetchKpis = async () => {
+        setIsKpiLoading(true);
+        const allUsers = await getAllUsers();
+        setTotalUsers(allUsers.filter(u => 'userId' in u).length);
+        setTotalConsultants(allUsers.filter(u => 'consultantId' in u).length);
+        setIsKpiLoading(false);
+      }
+      fetchKpis();
+    }
+  }, [user]);
 
   if (isLoading || !user) {
     return (
@@ -63,7 +80,7 @@ export default function DashboardPage() {
                 <Users className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{endUserProfiles.length}</div>
+                {isKpiLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{totalUsers}</div>}
                 <p className="text-xs text-muted-foreground">Currently registered end users</p>
               </CardContent>
             </Card>
@@ -74,7 +91,7 @@ export default function DashboardPage() {
                 <Briefcase className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{consultantProfiles.length}</div>
+                {isKpiLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{totalConsultants}</div>}
                 <p className="text-xs text-muted-foreground">Currently registered consultants</p>
               </CardContent>
             </Card>

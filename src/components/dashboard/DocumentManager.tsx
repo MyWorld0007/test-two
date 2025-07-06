@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ChangeEvent } from 'react';
@@ -18,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export function DocumentManager() {
   const { user, updateUserProfile } = useAuth();
@@ -53,15 +54,22 @@ export function DocumentManager() {
       toast({ title: "No file selected", description: "Please select a file to upload.", variant: "destructive" });
       return;
     }
+    if (!user) return;
+
     setIsUploading(true);
     toast({ title: "Uploading & Categorizing...", description: "Please wait while we process your document." });
 
     try {
+        // Upload file to Firebase Storage first to get a persistent URL
+        const storageRef = ref(storage, `documents/${user.id}/${Date.now()}_${selectedFile.name}`);
+        const uploadResult = await uploadBytes(storageRef, selectedFile);
+        const fileUrl = await getDownloadURL(uploadResult.ref);
+
         const base64data = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
             reader.onerror = reject;
-            reader.readAsDataURL(selectedFile);
+            reader.readAsDataURL(selectedFile!);
         });
 
         const scanResult = await scanDocument({ documentDataUri: base64data });
@@ -69,15 +77,15 @@ export function DocumentManager() {
         const newDocument: DocumentType = {
           id: `doc_${Date.now()}`,
           name: selectedFile.name,
-          url: URL.createObjectURL(selectedFile), // For local preview
+          url: fileUrl, // Use the public URL from Firebase Storage
           uploadedAt: new Date().toISOString(),
           category: scanResult.category,
           extractedText: scanResult.extractedText,
         };
 
         const updatedDocuments = [...documents, newDocument];
-        updateUserProfile({ ...userProfile, documents: updatedDocuments });
-        setDocuments(updatedDocuments); 
+        await updateUserProfile({ documents: updatedDocuments });
+        // No need for setDocuments, AuthProvider state change will trigger re-render
         setSelectedFile(null); 
         
         const fileInput = document.getElementById('file-upload') as HTMLInputElement;
@@ -101,17 +109,14 @@ export function DocumentManager() {
     let textToSummarize = doc.extractedText;
 
     if (!textToSummarize) {
-      if (!doc.url.startsWith('blob:')) {
-        toast({
-          title: 'Summarization Failed',
-          description: 'Scanning is required first and is only available for newly uploaded files in this demo.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
+      // If there's no extracted text, we must fetch the document and scan it.
+      // This requires the document to be accessible, which it is via the Firebase Storage URL.
       let base64data: string;
       try {
+        // Since CORS might be an issue, we'll proxy the fetch via a serverless function in a real app.
+        // For this demo, we'll assume direct access or use the stored data URI if available.
+        // A better approach is to use a cloud function to generate a base64 string on upload.
+        toast({ title: "Scan Required", description: "Document needs to be scanned first. This may take a moment."});
         const response = await fetch(doc.url);
         const blob = await response.blob();
         base64data = await new Promise<string>((resolve, reject) => {
@@ -122,7 +127,7 @@ export function DocumentManager() {
         });
       } catch (error) {
         console.error("File to Data URI Error:", error);
-        toast({ title: "File Read Error", description: "Could not read document. It may be from a previous session. Please re-upload.", variant: "destructive" });
+        toast({ title: "File Read Error", description: "Could not read document for scanning.", variant: "destructive" });
         return;
       }
       
@@ -133,16 +138,11 @@ export function DocumentManager() {
         const updatedDocsWithText = documents.map((d) =>
           d.id === doc.id ? { ...d, extractedText: textToSummarize, category: scanResult.category } : d
         );
-        updateUserProfile({ ...userProfile, documents: updatedDocsWithText });
-        setDocuments(updatedDocsWithText);
+        await updateUserProfile({ documents: updatedDocsWithText });
 
       } catch (e) {
         console.error('OCR Error during combined flow:', e);
-        toast({
-          title: 'Scan Failed',
-          description: 'Could not extract text from the document. Please try again.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Scan Failed', description: 'Could not extract text from the document.', variant: 'destructive' });
         return; 
       }
     }
@@ -160,48 +160,36 @@ export function DocumentManager() {
       const summary = summaryResultText.summary;
 
       const finalUpdatedDocs = documents.map((d) =>
-        d.id === doc.id ? { ...d, extractedText: textToSummarize, summary } : d
+        d.id === doc.id ? { ...d, summary } : d
       );
-      updateUserProfile({ ...userProfile, documents: finalUpdatedDocs });
-      setDocuments(finalUpdatedDocs);
-
-      toast({
-        title: 'Summary Generated',
-        description: 'The document has been successfully summarized.',
-      });
+      await updateUserProfile({ documents: finalUpdatedDocs });
+      
+      toast({ title: 'Summary Generated', description: 'The document has been successfully summarized.'});
 
       const finalDoc = finalUpdatedDocs.find(d => d.id === doc.id);
-      if (finalDoc) {
-        setViewingDocument(finalDoc);
-      }
+      if (finalDoc) setViewingDocument(finalDoc);
 
     } catch (e) {
-      console.error('Summarization Error during combined flow:', e);
-      toast({
-        title: 'Summarization Failed',
-        description: (e as Error).message || 'Could not summarize the document.',
-        variant: 'destructive',
-      });
+      console.error('Summarization Error:', e);
+      toast({ title: 'Summarization Failed', description: (e as Error).message || 'Could not summarize the document.', variant: 'destructive' });
       setViewingDocument(null);
     } finally {
         setIsSummarizing(false);
     }
   };
 
-  const handleRenameDocument = () => {
+  const handleRenameDocument = async () => {
     if (!editingDocument || !newFileName.trim()) return;
     const updatedDocs = documents.map(d => d.id === editingDocument.id ? {...d, name: newFileName.trim()} : d);
-    updateUserProfile({ ...userProfile, documents: updatedDocs });
-    setDocuments(updatedDocs);
+    await updateUserProfile({ documents: updatedDocs });
     toast({ title: "Rename Successful", description: `Document renamed to ${newFileName.trim()}.` });
     setEditingDocument(null);
     setNewFileName('');
   };
 
-  const handleDeleteDocument = (docId: string) => {
+  const handleDeleteDocument = async (docId: string) => {
     const updatedDocs = documents.filter(d => d.id !== docId);
-    updateUserProfile({ ...userProfile, documents: updatedDocs });
-    setDocuments(updatedDocs);
+    await updateUserProfile({ documents: updatedDocs });
     toast({ title: "Document Deleted", description: "The document has been removed." });
   };
   
@@ -260,15 +248,9 @@ export function DocumentManager() {
                               <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
                             </div>
                             <div className="flex gap-1.5 flex-shrink-0">
-                               {doc.url.startsWith('blob:') ? (
-                                <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              ) : (
-                                <Button variant="outline" size="icon" title="Preview not available for mock data" disabled>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              )}
+                               <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
+                                 <Eye className="h-4 w-4" />
+                               </Button>
                               <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
                                 <FileJson2 className="h-4 w-4" />
                               </Button>
@@ -294,13 +276,11 @@ export function DocumentManager() {
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                              {doc.url.startsWith('blob:') && (
-                                <Button variant="outline" size="icon" title="Download Document" asChild>
-                                  <a href={doc.url} download={doc.name}>
-                                    <Download className="h-4 w-4" />
-                                  </a>
-                                </Button>
-                              )}
+                              <Button variant="outline" size="icon" title="Download Document" asChild>
+                                <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </Button>
                             </div>
                           </li>
                         ))}

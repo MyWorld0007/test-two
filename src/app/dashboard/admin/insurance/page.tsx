@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,10 +13,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, Eye, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { insurancePolicies as mockPolicies, addInsurancePolicy, deleteInsurancePolicy } from '@/lib/mockData';
+import { getInsurancePolicies, addInsurancePolicy, deleteInsurancePolicy } from '@/lib/firestore';
 import type { InsurancePolicy } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 const insuranceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -28,7 +29,8 @@ const insuranceSchema = z.object({
 type InsuranceFormValues = z.infer<typeof insuranceSchema>;
 
 export default function AdminManageInsurancePage() {
-  const [policies, setPolicies] = useState<InsurancePolicy[]>(mockPolicies);
+  const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -40,14 +42,35 @@ export default function AdminManageInsurancePage() {
       insuredAmount: 0,
     },
   });
+  
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedPolicies = await getInsurancePolicies();
+        setPolicies(fetchedPolicies);
+      } catch (error) {
+        console.error("Failed to fetch policies:", error);
+        toast({ title: "Error", description: "Could not load insurance policies.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPolicies();
+  }, [toast]);
 
   const onSubmit = async (data: InsuranceFormValues) => {
     setIsSubmitting(true);
     const file = data.policyDocument[0];
-    const fileUrl = URL.createObjectURL(file); // In a real app, you'd upload this to storage
-
+    
     try {
-        addInsurancePolicy({
+        // 1. Upload file to Firebase Storage
+        const storageRef = ref(storage, `insuranceDocuments/${Date.now()}_${file.name}`);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const fileUrl = await getDownloadURL(uploadResult.ref);
+
+        // 2. Add policy data (with URL) to Firestore
+        const newPolicy = await addInsurancePolicy({
             companyName: data.companyName,
             policyType: data.policyType,
             insuredAmount: data.insuredAmount,
@@ -57,34 +80,34 @@ export default function AdminManageInsurancePage() {
             },
         });
 
-        // This is a bit of a hack for mock data. In a real app, you'd refetch.
-        setPolicies([...mockPolicies]);
+        // 3. Update local state
+        setPolicies(prevPolicies => [...prevPolicies, newPolicy]);
         
         toast({ title: "Policy Added", description: "The new insurance policy has been added successfully." });
         form.reset();
-        // Reset file input
         const fileInput = document.getElementById('policyDocument') as HTMLInputElement;
         if(fileInput) fileInput.value = '';
 
     } catch (error) {
+        console.error("Failed to add policy:", error);
         toast({ title: "Error", description: "Failed to add the policy.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
   };
 
-  const handleDeletePolicy = (policyId: string) => {
-    deleteInsurancePolicy(policyId);
-    setPolicies(policies.filter(p => p.id !== policyId));
-    toast({ title: "Policy Deleted", description: "The insurance policy has been removed." });
+  const handleDeletePolicy = async (policyId: string) => {
+    try {
+        await deleteInsurancePolicy(policyId);
+        setPolicies(policies.filter(p => p.id !== policyId));
+        toast({ title: "Policy Deleted", description: "The insurance policy has been removed." });
+    } catch(error) {
+        console.error("Failed to delete policy:", error);
+        toast({ title: "Error", description: "Could not delete the policy.", variant: "destructive" });
+    }
   };
   
   const handleViewDocument = (url: string, name: string) => {
-    if (url === '#') {
-      toast({ title: "Preview Not Available", description: "This is mock data and has no associated file."});
-      return;
-    }
-    // In a real app, you'd handle this better, maybe a modal with an iframe
     window.open(url, '_blank');
   };
 
@@ -167,53 +190,59 @@ export default function AdminManageInsurancePage() {
             <CardDescription>A list of all insurance policies configured in the system.</CardDescription>
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Policy Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {policies.map((policy) => (
-                    <TableRow key={policy.id}>
-                    <TableCell className="font-medium">{policy.companyName}</TableCell>
-                    <TableCell>{policy.policyType}</TableCell>
-                    <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(policy.insuredAmount)}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleViewDocument(policy.policyDocument.url, policy.policyDocument.name)} title="View Document">
-                            <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => alert('Edit functionality not implemented yet.')} title="Edit Policy">
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Delete Policy">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the policy from {policy.companyName}.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeletePolicy(policy.id)}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </TableCell>
+            {isLoading ? (
+                 <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Policy Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-            {policies.length === 0 && <p className="text-center text-muted-foreground py-4">No insurance policies found.</p>}
+                    </TableHeader>
+                    <TableBody>
+                    {policies.map((policy) => (
+                        <TableRow key={policy.id}>
+                        <TableCell className="font-medium">{policy.companyName}</TableCell>
+                        <TableCell>{policy.policyType}</TableCell>
+                        <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(policy.insuredAmount)}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewDocument(policy.policyDocument.url, policy.policyDocument.name)} title="View Document">
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => alert('Edit functionality not implemented yet.')} title="Edit Policy">
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Delete Policy">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the policy from {policy.companyName}.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeletePolicy(policy.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            )}
+            {!isLoading && policies.length === 0 && <p className="text-center text-muted-foreground py-4">No insurance policies found.</p>}
             </CardContent>
         </Card>
       </div>

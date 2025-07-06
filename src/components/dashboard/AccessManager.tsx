@@ -20,11 +20,12 @@ export function AccessManager() {
 
   const userProfile = user.profile as EndUserProfile;
 
-  const handleRequestUpdate = (requestId: string, newStatus: AccessRequestStatus) => {
+  const handleRequestUpdate = async (requestId: string, newStatus: AccessRequestStatus) => {
     const updatedRequests = userProfile.accessRequests.map(req =>
       req.requestId === requestId ? { ...req, status: newStatus } : req
     );
-    updateUserProfile({ ...userProfile, accessRequests: updatedRequests });
+    // Update the profile with the new requests array
+    await updateUserProfile({ ...userProfile, accessRequests: updatedRequests });
     toast({
       title: "Request Updated",
       description: `The access request has been ${newStatus}.`,

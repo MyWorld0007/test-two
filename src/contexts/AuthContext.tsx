@@ -3,16 +3,16 @@
 import type { ReactNode } from 'react';
 import { createContext, useState, useEffect } from 'react';
 import type { AuthenticatedUser, EndUserProfile, ConsultantProfile, AdminProfile, UserRole } from '@/lib/types';
-import { mockUsersDatabase, createNewUser, getProfileByEmail } from '@/lib/mockData';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getUserProfile, createUserProfileDocument, updateUserProfileDocument } from '@/lib/firestore';
 
 interface AuthContextType {
   user: AuthenticatedUser | null;
   isLoading: boolean;
   login: (email: string, passwordHash: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  updateUserProfile: (updatedProfileData: Partial<EndUserProfile | ConsultantProfile>) => void;
+  updateUserProfile: (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => Promise<void>;
   registerWithEmailAndPassword: (email: string, password: string, firstName: string, lastName: string, role: UserRole) => Promise<{ success: boolean; message?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; message?: string }>;
 }
@@ -26,19 +26,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       setIsLoading(true);
-      if (firebaseUser && firebaseUser.email) {
-        let userProfile = getProfileByEmail(firebaseUser.email);
+      if (firebaseUser) {
+        let userProfile = await getUserProfile(firebaseUser.uid);
         
-        // Handle case where user exists in Firebase Auth but not in our mock DB (e.g., Google sign-up)
-        if (!userProfile) {
-          const nameParts = firebaseUser.displayName?.split(' ') || ['New', 'User'];
-          const firstName = nameParts[0];
-          const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-          // For simplicity, new Google sign-ups are defaulted to 'enduser'
-          userProfile = createNewUser(firebaseUser.email, firstName, lastName, 'enduser');
+        if (userProfile) {
+           setUser(userProfile);
+        } else {
+            // This is a new user (likely via Google sign-in) who doesn't have a profile doc yet.
+            const nameParts = firebaseUser.displayName?.split(' ') || ['New', 'User'];
+            const firstName = nameParts[0];
+            const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+            // For simplicity, new Google sign-ups are defaulted to 'enduser'
+            const newUser = await createUserProfileDocument(firebaseUser.uid, firebaseUser.email!, firstName, lastName, 'enduser');
+            setUser(newUser);
         }
 
-        setUser(userProfile);
       } else {
         setUser(null);
       }
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, passwordHash);
+      // onAuthStateChanged will handle setting the user state.
       setIsLoading(false);
       return { success: true };
     } catch (error: any) {
@@ -77,11 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerWithEmailAndPassword = async (email: string, password: string, firstName: string, lastName: string, role: UserRole): Promise<{ success: boolean; message?: string }> => {
     setIsLoading(true);
     try {
-        if (getProfileByEmail(email)) {
-             return { success: false, message: 'An account with this email already exists.' };
-        }
-      await createUserWithEmailAndPassword(auth, email, password);
-      createNewUser(email, firstName, lastName, role);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await createUserProfileDocument(userCredential.user.uid, email, firstName, lastName, role);
+      // onAuthStateChanged will set the user state.
       setIsLoading(false);
       return { success: true };
     } catch (error: any) {
@@ -115,16 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
   
-  const updateUserProfile = (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
+  const updateUserProfile = async (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
     if (user) {
+      await updateUserProfileDocument(user.id, updatedProfileData);
+      // Optimistically update local state for immediate UI feedback
       const newProfile = { ...user.profile, ...updatedProfileData } as EndUserProfile | ConsultantProfile | AdminProfile;
       const updatedUser = { ...user, profile: newProfile };
       setUser(updatedUser);
-      if (user.role === 'enduser') {
-         mockUsersDatabase[user.email].profileData = newProfile as EndUserProfile;
-      } else if (user.role === 'consultant') {
-         mockUsersDatabase[user.email].profileData = newProfile as ConsultantProfile;
-      }
     }
   };
 

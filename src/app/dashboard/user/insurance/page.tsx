@@ -1,19 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { insurancePolicies as mockPolicies } from '@/lib/mockData';
+import { getInsurancePolicies } from '@/lib/firestore';
 import type { InsurancePolicy } from '@/lib/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog";
-import { Eye, CheckCircle } from 'lucide-react';
+import { Eye, CheckCircle, Loader2 } from 'lucide-react';
 
 export default function UserInsurancePage() {
   const { toast } = useToast();
-  const [policies] = useState<InsurancePolicy[]>(mockPolicies);
+  const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [documentToPreview, setDocumentToPreview] = useState<InsurancePolicy | null>(null);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedPolicies = await getInsurancePolicies();
+        setPolicies(fetchedPolicies);
+      } catch (error) {
+        console.error("Failed to fetch policies:", error);
+        toast({ title: "Error", description: "Could not load insurance policies.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPolicies();
+  }, [toast]);
 
   const handleInterested = (policy: InsurancePolicy) => {
     toast({
@@ -23,12 +40,16 @@ export default function UserInsurancePage() {
   };
   
   const handleViewDocument = (policy: InsurancePolicy) => {
-    if (policy.policyDocument.url === '#') {
-      toast({ title: "Preview Not Available", description: "This is mock data and has no associated file."});
-      return;
-    }
     setDocumentToPreview(policy);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>

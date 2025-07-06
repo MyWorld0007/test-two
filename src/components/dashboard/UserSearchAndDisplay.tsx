@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, AccessRequestStatus } from '@/lib/types';
-import { endUserProfiles, addCommentToUserSession, handleConsultantRequestAccess } from '@/lib/mockData';
+import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan } from 'lucide-react';
 import { format } from 'date-fns';
@@ -18,7 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const MAX_REJECTIONS = 3;
 
 export function UserSearchAndDisplay() {
-  const { user: consultantUser, updateUserProfile } = useAuth();
+  const { user: consultantUser, updateUserProfile: updateConsultantProfile } = useAuth();
   const { toast } = useToast();
   const [searchId, setSearchId] = useState('');
   const [foundUser, setFoundUser] = useState<EndUserProfile | null>(null);
@@ -32,21 +31,17 @@ export function UserSearchAndDisplay() {
   
   useEffect(() => {
     if (accessRequest?.status === 'approved' && foundUser && consultantUser) {
+      const consultantProfile = consultantUser.profile as ConsultantProfile;
       const existingEntry = consultantProfile.attendedUsers?.find(u => u.userId === foundUser.userId);
+      if (existingEntry) return; // Already recorded
+
       const newEntry = {
         userId: foundUser.userId,
         name: `${foundUser.firstName} ${foundUser.lastName}`,
         lastViewed: new Date().toISOString(),
       };
-      let updatedAttendedUsers;
-      if (existingEntry) {
-        updatedAttendedUsers = consultantProfile.attendedUsers.map(u =>
-          u.userId === foundUser.userId ? newEntry : u
-        );
-      } else {
-        updatedAttendedUsers = [...(consultantProfile.attendedUsers || []), newEntry];
-      }
-      updateUserProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
+      const updatedAttendedUsers = [...(consultantProfile.attendedUsers || []), newEntry];
+      updateConsultantProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessRequest, foundUser]);
@@ -60,36 +55,64 @@ export function UserSearchAndDisplay() {
     setFoundUser(null);
     setAccessRequest(null);
 
-    setTimeout(() => { // Simulate API delay
-      const user = endUserProfiles.find(p => p.uniqueId.toLowerCase() === searchId.toLowerCase().trim());
-      if (user) {
-        setFoundUser(user);
-        const request = user.accessRequests?.find(r => r.consultantId === consultantUser.id) || null;
-        setAccessRequest(request);
-      } else {
-        toast({ title: "Not Found", description: `No user found with Unique ID: ${searchId}.`, variant: "destructive" });
+    setTimeout(async () => {
+      try {
+        const user = await findUserByUniqueId(searchId.trim());
+        if (user) {
+            setFoundUser(user);
+            const request = user.accessRequests?.find(r => r.consultantId === consultantUser.id) || null;
+            setAccessRequest(request);
+        } else {
+            toast({ title: "Not Found", description: `No user found with Unique ID: ${searchId}.`, variant: "destructive" });
+        }
+      } catch (error) {
+         toast({ title: "Search Failed", description: "An error occurred while searching.", variant: "destructive" });
+      } finally {
+        setIsSearching(false);
       }
-      setIsSearching(false);
-    }, 500);
+    }, 500); // Simulate API delay
   };
   
-  const handleRequestAccess = () => {
+  const handleRequestAccess = async () => {
     if (!foundUser || !consultantUser) return;
     setIsLoadingAccess(true);
 
-    const result = handleConsultantRequestAccess(foundUser.userId, consultantUser.id, `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`);
+    let updatedRequests = [...(foundUser.accessRequests || [])];
+    let currentRequest = updatedRequests.find(r => r.consultantId === consultantUser.id);
     
-    if (result.success) {
-      setAccessRequest(result.request);
-      toast({ title: "Request Sent", description: "Your access request has been sent to the user." });
+    if (currentRequest) {
+      if ((currentRequest.rejectionCount || 0) >= MAX_REJECTIONS) {
+        toast({ title: "Request Limit Reached", description: "You cannot send more requests to this user.", variant: "destructive" });
+        setIsLoadingAccess(false);
+        return;
+      }
+      currentRequest.status = 'pending';
+      currentRequest.requestedAt = new Date().toISOString();
     } else {
-      toast({ title: "Request Failed", description: result.message, variant: "destructive" });
+       currentRequest = {
+        requestId: `req_${Date.now()}`,
+        consultantId: consultantUser.id,
+        consultantName: `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+        rejectionCount: 0,
+      };
+      updatedRequests.push(currentRequest);
+    }
+    
+    try {
+        await updateUserProfileDocument(foundUser.userId, { accessRequests: updatedRequests });
+        setAccessRequest(currentRequest);
+        setFoundUser(prev => prev ? {...prev, accessRequests: updatedRequests} : null);
+        toast({ title: "Request Sent", description: "Your access request has been sent to the user." });
+    } catch (error) {
+        toast({ title: "Request Failed", description: "Could not send access request.", variant: "destructive" });
     }
 
     setIsLoadingAccess(false);
   }
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!foundUser || !comment.trim() || !consultantUser) return;
     setIsCommenting(true);
     
@@ -101,10 +124,16 @@ export function UserSearchAndDisplay() {
       timestamp: new Date().toISOString(),
     };
 
-    addCommentToUserSession(foundUser.userId, newComment);
-    setFoundUser(prevUser => prevUser ? { ...prevUser } : null); 
-    setComment('');
-    toast({ title: "Comment Added", description: "Your comment has been saved." });
+    const updatedSessions = [...(foundUser.sessions || []), newComment];
+    try {
+        await updateUserProfileDocument(foundUser.userId, { sessions: updatedSessions });
+        setFoundUser(prevUser => prevUser ? { ...prevUser, sessions: updatedSessions } : null); 
+        setComment('');
+        toast({ title: "Comment Added", description: "Your comment has been saved." });
+    } catch(error) {
+        toast({ title: "Error", description: "Failed to add comment.", variant: "destructive"});
+    }
+    
     setIsCommenting(false);
   };
 
@@ -189,7 +218,7 @@ export function UserSearchAndDisplay() {
           <CardContent className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center"><FileText className="mr-2 h-5 w-5 text-accent" /> Documents</h3>
-              {foundUser.documents.length > 0 ? (
+              {foundUser.documents && foundUser.documents.length > 0 ? (
                 <ScrollArea className="h-48 border rounded-md p-3 bg-muted/20">
                   <ul className="space-y-2">
                     {foundUser.documents.map((doc: DocumentType) => (
@@ -207,7 +236,7 @@ export function UserSearchAndDisplay() {
 
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-accent" /> Session Comments</h3>
-              {foundUser.sessions.length > 0 ? (
+              {foundUser.sessions && foundUser.sessions.length > 0 ? (
                 <ScrollArea className="h-64 border rounded-md p-3 bg-muted/20">
                   <ul className="space-y-3">
                     {foundUser.sessions.slice().reverse().map((s: SessionComment) => (

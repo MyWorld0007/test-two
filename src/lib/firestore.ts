@@ -1,0 +1,147 @@
+import { db } from './firebase';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  Timestamp,
+} from 'firebase/firestore';
+import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
+
+// ================== User Profile Functions ==================
+
+export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | null> => {
+  const userDocRef = doc(db, 'users', uid);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const profileData = userDocSnap.data() as EndUserProfile | ConsultantProfile | AdminProfile;
+    // Determine role based on unique key existence
+    const role: UserRole = (profileData as EndUserProfile).userId ? 'enduser' 
+                         : (profileData as ConsultantProfile).consultantId ? 'consultant' 
+                         : 'admin';
+    return {
+      id: uid,
+      email: profileData.email,
+      role: role,
+      profile: profileData,
+    };
+  } else {
+    // This case might happen if an auth record exists but the firestore doc creation failed.
+    return null;
+  }
+};
+
+export const createUserProfileDocument = async (
+  uid: string,
+  email: string,
+  firstName: string,
+  lastName: string,
+  role: UserRole
+): Promise<AuthenticatedUser> => {
+    let profile: EndUserProfile | ConsultantProfile | AdminProfile;
+    if (role === 'enduser') {
+        profile = {
+            userId: uid,
+            uniqueId: `EU${Date.now().toString().slice(-5)}`,
+            firstName,
+            lastName,
+            email,
+            phone: '',
+            age: 0,
+            gender: 'Other',
+            documents: [],
+            sessions: [],
+            accessRequests: [],
+        };
+    } else if (role === 'consultant') { // consultant
+        profile = {
+            consultantId: uid,
+            firstName,
+            lastName,
+            email,
+            qualification: '',
+            qualificationNumber: '',
+            totalExperience: 0,
+            specializationField: '',
+            attendedUsers: [],
+        };
+    } else { // admin
+        profile = {
+            adminId: uid,
+            name: `${firstName} ${lastName}`,
+            email
+        }
+    }
+    await setDoc(doc(db, "users", uid), profile);
+    return { id: uid, email, role, profile };
+};
+
+
+export const updateUserProfileDocument = async (uid: string, data: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, data);
+};
+
+export const getAllUsers = async (): Promise<(EndUserProfile | ConsultantProfile)[]> => {
+    const usersCollectionRef = collection(db, 'users');
+    // Simple query to get all non-admin users
+    const q = query(usersCollectionRef, where('email', '!=', 'admin@example.com'));
+    
+    const querySnapshot = await getDocs(q);
+    const users: (EndUserProfile | ConsultantProfile)[] = [];
+    querySnapshot.forEach((doc) => {
+        users.push(doc.data() as EndUserProfile | ConsultantProfile);
+    });
+    return users;
+};
+
+export const findUserByUniqueId = async (uniqueId: string): Promise<EndUserProfile | null> => {
+    const usersCollectionRef = collection(db, 'users');
+    const q = query(usersCollectionRef, where('uniqueId', '==', uniqueId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return null;
+    }
+    // Assuming uniqueId is truly unique, return the first result.
+    return querySnapshot.docs[0].data() as EndUserProfile;
+};
+
+
+// ================== Insurance Functions ==================
+
+export const getInsurancePolicies = async (): Promise<InsurancePolicy[]> => {
+    const policiesCollectionRef = collection(db, 'insurancePolicies');
+    const querySnapshot = await getDocs(policiesCollectionRef);
+    const policies: InsurancePolicy[] = [];
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        policies.push({ 
+            ...data, 
+            id: doc.id,
+            // Firestore Timestamps need to be converted to strings for the app
+            createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        } as InsurancePolicy);
+    });
+    return policies;
+};
+
+export const addInsurancePolicy = async (policy: Omit<InsurancePolicy, 'id' | 'createdAt'>): Promise<InsurancePolicy> => {
+    const newPolicyData = {
+        ...policy,
+        createdAt: Timestamp.now(),
+    };
+    const docRef = await addDoc(collection(db, "insurancePolicies"), newPolicyData);
+    return { ...newPolicyData, id: docRef.id, createdAt: newPolicyData.createdAt.toDate().toISOString() };
+};
+
+export const deleteInsurancePolicy = async (policyId: string): Promise<void> => {
+    await deleteDoc(doc(db, "insurancePolicies", policyId));
+};

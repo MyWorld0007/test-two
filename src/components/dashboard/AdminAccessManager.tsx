@@ -1,8 +1,7 @@
-
 'use client';
 
-import { useState } from 'react';
-import { endUserProfiles, consultantProfiles, grantConsultantAccess, updateAccessRequest, resetRejectionCount } from '@/lib/mockData';
+import { useState, useEffect } from 'react';
+import { getAllUsers, updateUserProfileDocument } from '@/lib/firestore';
 import type { EndUserProfile, ConsultantProfile, AccessRequest, AccessRequestStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,64 +17,124 @@ import { Separator } from '../ui/separator';
 
 export function AdminAccessManager() {
   const { toast } = useToast();
+  const [endUsers, setEndUsers] = useState<EndUserProfile[]>([]);
+  const [consultants, setConsultants] = useState<ConsultantProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [dataVersion, setDataVersion] = useState(0); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedConsultantForGrant, setSelectedConsultantForGrant] = useState('');
   
   const forceRerender = () => setDataVersion(v => v + 1);
 
-  const handleStatusChange = (userId: string, requestId: string, newStatus: AccessRequestStatus) => {
-    const success = updateAccessRequest(userId, requestId, newStatus);
-    if (success) {
-      toast({
-        title: "Access Updated",
-        description: `Request status has been set to ${newStatus}.`,
-      });
-      forceRerender();
-    } else {
-      toast({
-        title: "Update Failed",
-        description: "Could not update the access request.",
-        variant: "destructive",
-      });
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+        setIsLoading(true);
+        try {
+            const users = await getAllUsers();
+            setEndUsers(users.filter(u => 'userId' in u) as EndUserProfile[]);
+            setConsultants(users.filter(u => 'consultantId' in u) as ConsultantProfile[]);
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+            toast({ title: "Error", description: "Failed to load user and consultant data.", variant: "destructive"});
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchAllUsers();
+  }, [dataVersion, toast]);
+
+  const handleAccessRequestUpdate = async (userId: string, requestId: string, newStatus: AccessRequestStatus) => {
+    const userProfile = endUsers.find(u => u.userId === userId);
+    if (userProfile) {
+        const updatedRequests = userProfile.accessRequests.map(req => {
+             if (req.requestId === requestId) {
+                const newReq = { ...req, status: newStatus };
+                if (newStatus === 'declined' && req.status !== 'declined') {
+                    newReq.rejectionCount = (newReq.rejectionCount || 0) + 1;
+                }
+                return newReq;
+            }
+            return req;
+        });
+
+        try {
+            await updateUserProfileDocument(userId, { accessRequests: updatedRequests });
+            toast({ title: "Access Updated", description: `Request status has been set to ${newStatus}.` });
+            forceRerender();
+        } catch (error) {
+             toast({ title: "Update Failed", description: "Could not update the access request.", variant: "destructive" });
+        }
     }
   };
 
-  const handleGrantAccess = (userId: string, consultantId: string) => {
+  const handleGrantAccess = async (userId: string, consultantId: string) => {
     if (!consultantId) {
       toast({ title: "Selection Incomplete", description: "Please select a consultant.", variant: "destructive"});
       return;
     }
     setIsProcessing(true);
-    const success = grantConsultantAccess(userId, consultantId);
-    if (success) {
-      toast({ title: "Access Granted", description: "The consultant now has access to the user's profile." });
-      forceRerender();
-      setSelectedConsultantForGrant('');
-    } else {
-       toast({ title: "Grant Failed", description: "Could not grant access.", variant: "destructive" });
+    
+    const userProfile = endUsers.find(u => u.userId === userId);
+    const consultantProfile = consultants.find(c => c.consultantId === consultantId);
+
+    if (userProfile && consultantProfile) {
+        let updatedRequests = [...(userProfile.accessRequests || [])];
+        const existingRequestIndex = updatedRequests.findIndex(r => r.consultantId === consultantId);
+
+        if (existingRequestIndex > -1) {
+            updatedRequests[existingRequestIndex].status = 'approved';
+        } else {
+            const newRequest: AccessRequest = {
+                requestId: `req_${Date.now()}`,
+                consultantId: consultantId,
+                consultantName: `${consultantProfile.firstName} ${consultantProfile.lastName}`,
+                status: 'approved',
+                requestedAt: new Date().toISOString(),
+                rejectionCount: 0,
+            };
+            updatedRequests.push(newRequest);
+        }
+        
+        try {
+            await updateUserProfileDocument(userId, { accessRequests: updatedRequests });
+            toast({ title: "Access Granted", description: "The consultant now has access to the user's profile." });
+            forceRerender();
+            setSelectedConsultantForGrant('');
+        } catch (error) {
+            toast({ title: "Grant Failed", description: "Could not grant access.", variant: "destructive" });
+        }
     }
     setIsProcessing(false);
   };
-
-  const handleRevokeAccess = (userId: string, request: AccessRequest) => {
-    handleStatusChange(userId, request.requestId, 'declined');
-  };
   
-  const handleResetRejections = (userId: string, requestId: string) => {
-    const success = resetRejectionCount(userId, requestId);
-    if (success) {
-      toast({ title: "Rejections Reset", description: "The consultant's rejection count for this user has been reset." });
-      forceRerender();
-    } else {
-      toast({ title: "Reset Failed", description: "Could not reset the rejection count.", variant: "destructive" });
+  const handleResetRejections = async (userId: string, requestId: string) => {
+    const userProfile = endUsers.find(u => u.userId === userId);
+    if (userProfile) {
+        const updatedRequests = userProfile.accessRequests.map(req => 
+            req.requestId === requestId ? { ...req, rejectionCount: 0 } : req
+        );
+
+        try {
+            await updateUserProfileDocument(userId, { accessRequests: updatedRequests });
+            toast({ title: "Rejections Reset", description: "The consultant's rejection count for this user has been reset." });
+            forceRerender();
+        } catch (error) {
+            toast({ title: "Reset Failed", description: "Could not reset the rejection count.", variant: "destructive" });
+        }
     }
   };
 
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
 
-  const requestsByConsultant = consultantProfiles.map(consultant => {
-    const requests = endUserProfiles.flatMap(user =>
-      user.accessRequests
+  const requestsByConsultant = consultants.map(consultant => {
+    const requests = endUsers.flatMap(user =>
+      (user.accessRequests || [])
         .filter(req => req.consultantId === consultant.consultantId)
         .map(req => ({
           ...req,
@@ -101,9 +160,9 @@ export function AdminAccessManager() {
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
-              {endUserProfiles.map(user => {
-                const pendingRequests = user.accessRequests.filter(r => r.status === 'pending');
-                const approvedRequests = user.accessRequests.filter(r => r.status === 'approved');
+              {endUsers.map(user => {
+                const pendingRequests = (user.accessRequests || []).filter(r => r.status === 'pending');
+                const approvedRequests = (user.accessRequests || []).filter(r => r.status === 'approved');
                 
                 return (
                   <AccordionItem value={user.userId} key={user.userId}>
@@ -124,8 +183,8 @@ export function AdminAccessManager() {
                             <div key={req.requestId} className="flex justify-between items-center p-2 rounded-md hover:bg-background">
                               <span>{req.consultantName}</span>
                               <div className="space-x-2">
-                                <Button size="sm" onClick={() => handleStatusChange(user.userId, req.requestId, 'approved')}><Check className="mr-2 h-4 w-4" />Approve</Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleStatusChange(user.userId, req.requestId, 'declined')}><X className="mr-2 h-4 w-4"/>Decline</Button>
+                                <Button size="sm" onClick={() => handleAccessRequestUpdate(user.userId, req.requestId, 'approved')}><Check className="mr-2 h-4 w-4" />Approve</Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleAccessRequestUpdate(user.userId, req.requestId, 'declined')}><X className="mr-2 h-4 w-4"/>Decline</Button>
                               </div>
                             </div>
                           ))}
@@ -138,7 +197,7 @@ export function AdminAccessManager() {
                           {approvedRequests.map(req => (
                              <div key={req.requestId} className="flex justify-between items-center p-2 rounded-md hover:bg-background">
                                <span>{req.consultantName}</span>
-                               <Button size="sm" variant="destructive" onClick={() => handleRevokeAccess(user.userId, req)}><ShieldX className="mr-2 h-4 w-4"/>Revoke</Button>
+                               <Button size="sm" variant="destructive" onClick={() => handleAccessRequestUpdate(user.userId, req.requestId, 'declined')}><ShieldX className="mr-2 h-4 w-4"/>Revoke</Button>
                              </div>
                           ))}
                         </div>
@@ -152,7 +211,7 @@ export function AdminAccessManager() {
                           <Select onValueChange={setSelectedConsultantForGrant}>
                             <SelectTrigger className="flex-grow"><SelectValue placeholder="Select a consultant..." /></SelectTrigger>
                             <SelectContent>
-                              {consultantProfiles
+                              {consultants
                                .filter(c => !approvedRequests.find(ar => ar.consultantId === c.consultantId))
                                .map(c => <SelectItem key={c.consultantId} value={c.consultantId}>{c.firstName} {c.lastName}</SelectItem>)}
                             </SelectContent>
@@ -214,7 +273,7 @@ export function AdminAccessManager() {
                                     )}
                                     <Select 
                                       value={req.status} 
-                                      onValueChange={(newStatus) => handleStatusChange(req.userId, req.requestId, newStatus as AccessRequestStatus)}
+                                      onValueChange={(newStatus) => handleAccessRequestUpdate(req.userId, req.requestId, newStatus as AccessRequestStatus)}
                                     >
                                       <SelectTrigger className="w-36">
                                         <SelectValue placeholder="Set Status" />
