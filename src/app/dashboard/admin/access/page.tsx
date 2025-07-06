@@ -13,9 +13,9 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 
-export function AdminAccessManager() {
+export default function AdminAccessManagerPage() {
   const { toast } = useToast();
   const [endUsers, setEndUsers] = useState<EndUserProfile[]>([]);
   const [consultants, setConsultants] = useState<ConsultantProfile[]>([]);
