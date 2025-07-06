@@ -75,6 +75,20 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     return null; // Or a redirect component, though useEffect handles it
   }
   
+  const getProfilePageUrl = () => {
+    switch (user.role) {
+      case 'enduser':
+        return '/dashboard/user/profile';
+      case 'consultant':
+        return '/dashboard/consultant/profile';
+      case 'admin':
+        return '/dashboard'; // Admin doesn't have a dedicated profile page
+      default:
+        return '/dashboard';
+    }
+  };
+  const profilePageUrl = getProfilePageUrl();
+
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     const parts = name.split(' ');
@@ -150,14 +164,18 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                <span>Privacy</span>
-              </DropdownMenuItem>
+              <Link href={profilePageUrl} passHref>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href={profilePageUrl} passHref>
+                <DropdownMenuItem>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <span>Privacy</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
