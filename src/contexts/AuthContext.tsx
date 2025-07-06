@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const firstName = nameParts[0];
             const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
             // For simplicity, new Google sign-ups are defaulted to 'enduser'
-            const newUser = await createUserProfileDocument(firebaseUser.uid, firebaseUser.email!, firstName, lastName, 'enduser');
+            const newUser = await createUserProfileDocument(firebaseUser.user.uid, firebaseUser.email!, firstName, lastName, 'enduser');
             setUser(newUser);
         }
 
