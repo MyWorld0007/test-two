@@ -10,9 +10,10 @@ import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, AccessRequestStatus } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 
 const MAX_REJECTIONS = 3;
 
@@ -26,6 +27,7 @@ export function UserSearchAndDisplay() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
+  const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
@@ -222,9 +224,14 @@ export function UserSearchAndDisplay() {
                 <ScrollArea className="h-48 border rounded-md p-3 bg-muted/20">
                   <ul className="space-y-2">
                     {foundUser.documents.map((doc: DocumentType) => (
-                      <li key={doc.id} className="text-sm p-2 rounded bg-background shadow-sm">
-                        <p className="font-medium">{doc.name}</p>
-                        {doc.summary && <p className="text-xs text-muted-foreground mt-1 truncate" title={doc.summary}>Summary: {doc.summary.substring(0,60)}...</p>}
+                      <li key={doc.id} className="flex items-center justify-between text-sm p-2 rounded bg-background shadow-sm">
+                         <div>
+                          <p className="font-medium">{doc.name}</p>
+                          {doc.summary && <p className="text-xs text-muted-foreground mt-1 truncate" title={doc.summary}>Summary: {doc.summary.substring(0,60)}...</p>}
+                        </div>
+                        <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
+                            <Eye className="h-4 w-4" />
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -306,6 +313,25 @@ export function UserSearchAndDisplay() {
           {renderAccessContent()}
         </div>
       )}
+
+      <Dialog open={!!documentToPreview} onOpenChange={(isOpen) => !isOpen && setDocumentToPreview(null)}>
+        <DialogContent className="max-w-4xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{documentToPreview?.name}</DialogTitle>
+            <DialogDescription>
+              Document Preview
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-full py-4">
+             {documentToPreview?.dataUri && (
+                <iframe src={documentToPreview.dataUri} className="w-full h-full border rounded-md" title={documentToPreview.name} />
+             )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
