@@ -12,9 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from '@/hooks/useAuth';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Terminal } from 'lucide-react';
 import { AppLogo } from '@/components/common/AppLogo';
 import { Separator } from '../ui/separator';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -122,6 +124,19 @@ export function LoginForm() {
             </Button>
           </form>
         </Form>
+
+        <Alert className="mt-6">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Demo Credentials</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-5 text-xs space-y-1 mt-2">
+                <li><b>Admin:</b> admin@example.com / Admin@1234</li>
+                <li><b>Consultant:</b> consultant@example.com / Consult@1234</li>
+                <li><b>End User:</b> enduser@example.com / Test@1234</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
