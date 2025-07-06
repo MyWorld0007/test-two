@@ -201,6 +201,8 @@ export default function AdminManageInsurancePage() {
                         <TableHead>Company</TableHead>
                         <TableHead>Policy Type</TableHead>
                         <TableHead>Amount</TableHead>
+                        <TableHead>Document Name</TableHead>
+                        <TableHead>Created At</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
@@ -210,6 +212,8 @@ export default function AdminManageInsurancePage() {
                         <TableCell className="font-medium">{policy.companyName}</TableCell>
                         <TableCell>{policy.policyType}</TableCell>
                         <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(policy.insuredAmount)}</TableCell>
+                        <TableCell>{policy.policyDocument.name}</TableCell>
+                        <TableCell>{format(new Date(policy.createdAt), 'dd MMM yyyy')}</TableCell>
                         <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="icon" onClick={() => handleViewDocument(policy.policyDocument.url, policy.policyDocument.name)} title="View Document">
                                 <Eye className="h-4 w-4" />

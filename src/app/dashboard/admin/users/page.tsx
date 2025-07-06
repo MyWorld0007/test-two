@@ -9,6 +9,7 @@ import { getAllEndUsers } from '@/lib/firestore';
 import type { EndUserProfile } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export default function AdminManageUsersPage() {
   const [users, setUsers] = useState<EndUserProfile[]>([]);
@@ -74,6 +75,9 @@ export default function AdminManageUsersPage() {
                   <TableHead>Unique ID</TableHead>
                   <TableHead>Approved Access</TableHead>
                   <TableHead>Gender</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Age</TableHead>
+                  <TableHead>Last Login</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -87,6 +91,11 @@ export default function AdminManageUsersPage() {
                       <TableCell><Badge variant="secondary">{user.uniqueId}</Badge></TableCell>
                       <TableCell>{approvedCount}</TableCell>
                       <TableCell>{user.gender}</TableCell>
+                      <TableCell>{user.phone}</TableCell>
+                      <TableCell>{user.age}</TableCell>
+                       <TableCell>
+                        {user.lastLoginAt ? format(new Date(user.lastLoginAt), 'dd MMM yyyy, hh:mm a') : 'N/A'}
+                      </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => handleViewUser(user.userId)} title="View User">
                           <Eye className="h-4 w-4" />

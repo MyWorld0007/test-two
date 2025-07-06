@@ -8,6 +8,7 @@ import { getAllConsultants } from '@/lib/firestore';
 import type { ConsultantProfile } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export default function AdminManageConsultantsPage() {
   const [consultants, setConsultants] = useState<ConsultantProfile[]>([]);
@@ -72,6 +73,9 @@ export default function AdminManageConsultantsPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Specialization</TableHead>
                   <TableHead>Users Attended</TableHead>
+                  <TableHead>Qualification</TableHead>
+                  <TableHead>Experience (Yrs)</TableHead>
+                  <TableHead>Last Login</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -82,6 +86,11 @@ export default function AdminManageConsultantsPage() {
                     <TableCell>{consultant.email}</TableCell>
                     <TableCell>{consultant.specializationField}</TableCell>
                     <TableCell>{consultant.attendedUsers?.length || 0}</TableCell>
+                    <TableCell>{consultant.qualification}</TableCell>
+                    <TableCell>{consultant.totalExperience}</TableCell>
+                    <TableCell>
+                      {consultant.lastLoginAt ? format(new Date(consultant.lastLoginAt), 'dd MMM yyyy, hh:mm a') : 'N/A'}
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => handleViewConsultant(consultant.consultantId)} title="View Consultant">
                         <Eye className="h-4 w-4" />
