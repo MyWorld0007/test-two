@@ -17,8 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
-import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export function DocumentManager() {
   const { user, addDocument, updateUserProfile } = useAuth(); // Use the new addDocument function
@@ -55,23 +53,19 @@ export function DocumentManager() {
     toast({ title: "Uploading & Categorizing...", description: "Please wait while we process your document." });
 
     try {
-        const storageRef = ref(storage, `documents/${user.id}/${Date.now()}_${selectedFile.name}`);
-        const uploadResult = await uploadBytes(storageRef, selectedFile);
-        const fileUrl = await getDownloadURL(uploadResult.ref);
-
-        const base64data = await new Promise<string>((resolve, reject) => {
+        const dataUri = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
             reader.onerror = reject;
             reader.readAsDataURL(selectedFile!);
         });
 
-        const scanResult = await scanDocument({ documentDataUri: base64data });
+        const scanResult = await scanDocument({ documentDataUri: dataUri });
 
         const newDocument: DocumentType = {
           id: `doc_${Date.now()}`,
           name: selectedFile.name,
-          url: fileUrl,
+          dataUri: dataUri,
           uploadedAt: new Date().toISOString(),
           category: scanResult.category,
           extractedText: scanResult.extractedText,
@@ -92,7 +86,7 @@ export function DocumentManager() {
 
     } catch (error) {
         console.error("Upload and Scan Error:", error);
-        toast({ title: "Processing Failed", description: (error as Error).message || "Could not automatically categorize the document.", variant: "destructive" });
+        toast({ title: "Processing Failed", description: (error as Error).message || "Could not process the document. File may be too large.", variant: "destructive" });
     } finally {
         setIsUploading(false);
     }
@@ -104,26 +98,10 @@ export function DocumentManager() {
     let textToSummarize = doc.extractedText;
 
     if (!textToSummarize) {
-      // If there's no extracted text, we must fetch the document and scan it.
-      let base64data: string;
+      // If there's no extracted text, we must rescan the document using its stored data URI.
+      toast({ title: "Scan Required", description: "Document needs to be scanned first. This may take a moment."});
       try {
-        toast({ title: "Scan Required", description: "Document needs to be scanned first. This may take a moment."});
-        const response = await fetch(doc.url);
-        const blob = await response.blob();
-        base64data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-      } catch (error) {
-        console.error("File to Data URI Error:", error);
-        toast({ title: "File Read Error", description: "Could not read document for scanning.", variant: "destructive" });
-        return;
-      }
-      
-      try {
-        const scanResult = await scanDocument({ documentDataUri: base64data });
+        const scanResult = await scanDocument({ documentDataUri: doc.dataUri });
         textToSummarize = scanResult.extractedText;
         
         const updatedDocsWithText = documents.map((d) =>
@@ -268,7 +246,7 @@ export function DocumentManager() {
                                 </AlertDialogContent>
                               </AlertDialog>
                               <Button variant="outline" size="icon" title="Download Document" asChild>
-                                <a href={doc.url} download={doc.name} target="_blank" rel="noopener noreferrer">
+                                <a href={doc.dataUri} download={doc.name} target="_blank" rel="noopener noreferrer">
                                   <Download className="h-4 w-4" />
                                 </a>
                               </Button>
@@ -347,8 +325,8 @@ export function DocumentManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="h-full py-4">
-             {documentToPreview?.url && (
-                <iframe src={documentToPreview.url} className="w-full h-full border rounded-md" title={documentToPreview.name} />
+             {documentToPreview?.dataUri && (
+                <iframe src={documentToPreview.dataUri} className="w-full h-full border rounded-md" title={documentToPreview.name} />
              )}
           </div>
           <DialogFooter>

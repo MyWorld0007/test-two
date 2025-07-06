@@ -16,7 +16,7 @@ export type DocumentCategory = 'Lab' | 'Clinical' | 'Hospital' | 'Estimate' | 'O
 export interface Document {
   id: string;
   name: string;
-  url: string; // For mock, this could be a placeholder or data URI
+  dataUri: string; 
   uploadedAt: string;
   category: DocumentCategory;
   extractedText?: string;
@@ -90,7 +90,7 @@ export interface InsurancePolicy {
   insuredAmount: number;
   policyDocument: {
     name: string;
-    url: string;
+    dataUri: string;
   };
   createdAt: string;
 }

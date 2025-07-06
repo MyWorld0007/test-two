@@ -94,8 +94,8 @@ export default function UserInsurancePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="h-full py-4">
-             {documentToPreview?.policyDocument.url && (
-                <iframe src={documentToPreview.policyDocument.url} className="w-full h-full border rounded-md" title={documentToPreview.policyDocument.name} />
+             {documentToPreview?.policyDocument.dataUri && (
+                <iframe src={documentToPreview.policyDocument.dataUri} className="w-full h-full border rounded-md" title={documentToPreview.policyDocument.name} />
              )}
           </div>
           <DialogFooter>

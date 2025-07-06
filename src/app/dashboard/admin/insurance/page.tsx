@@ -16,8 +16,6 @@ import { format } from 'date-fns';
 import { getInsurancePolicies, addInsurancePolicy, deleteInsurancePolicy } from '@/lib/firestore';
 import type { InsurancePolicy } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 
 const insuranceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -64,19 +62,22 @@ export default function AdminManageInsurancePage() {
     const file = data.policyDocument[0];
     
     try {
-        // 1. Upload file to Firebase Storage
-        const storageRef = ref(storage, `insuranceDocuments/${Date.now()}_${file.name}`);
-        const uploadResult = await uploadBytes(storageRef, file);
-        const fileUrl = await getDownloadURL(uploadResult.ref);
+        // 1. Convert file to Data URI
+        const dataUri = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
 
-        // 2. Add policy data (with URL) to Firestore
+        // 2. Add policy data (with data URI) to Firestore
         const newPolicy = await addInsurancePolicy({
             companyName: data.companyName,
             policyType: data.policyType,
             insuredAmount: data.insuredAmount,
             policyDocument: {
                 name: file.name,
-                url: fileUrl,
+                dataUri: dataUri,
             },
         });
 
@@ -90,7 +91,7 @@ export default function AdminManageInsurancePage() {
 
     } catch (error) {
         console.error("Failed to add policy:", error);
-        toast({ title: "Error", description: "Failed to add the policy.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to add the policy. File may be too large.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
@@ -107,8 +108,8 @@ export default function AdminManageInsurancePage() {
     }
   };
   
-  const handleViewDocument = (url: string, name: string) => {
-    window.open(url, '_blank');
+  const handleViewDocument = (dataUri: string, name: string) => {
+    window.open(dataUri, '_blank');
   };
 
   return (
@@ -215,7 +216,7 @@ export default function AdminManageInsurancePage() {
                         <TableCell>{policy.policyDocument.name}</TableCell>
                         <TableCell>{format(new Date(policy.createdAt), 'dd MMM yyyy')}</TableCell>
                         <TableCell className="text-right space-x-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewDocument(policy.policyDocument.url, policy.policyDocument.name)} title="View Document">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewDocument(policy.policyDocument.dataUri, policy.policyDocument.name)} title="View Document">
                                 <Eye className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => alert('Edit functionality not implemented yet.')} title="Edit Policy">
