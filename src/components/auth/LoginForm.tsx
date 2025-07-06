@@ -39,11 +39,11 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setError(null);
-    const success = await login(data.email, data.password);
-    if (success) {
+    const result = await login(data.email, data.password);
+    if (result.success) {
       router.push('/dashboard');
     } else {
-      setError('Invalid email or password.');
+      setError(result.message || 'An unexpected error occurred.');
     }
     setIsLoading(false);
   };
