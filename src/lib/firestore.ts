@@ -152,7 +152,7 @@ export const createConsultantByAdmin = async (
 
 export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
-    const q = query(usersCollectionRef, where('role', '==', 'consultant'));
+    const q = query(usersCollectioneRef, where('role', '==', 'consultant'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as ConsultantProfile);
 };
