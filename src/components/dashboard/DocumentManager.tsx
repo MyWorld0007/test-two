@@ -21,7 +21,7 @@ import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export function DocumentManager() {
-  const { user, updateUserProfile } = useAuth();
+  const { user, addDocument, updateUserProfile } = useAuth(); // Use the new addDocument function
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -55,7 +55,6 @@ export function DocumentManager() {
     toast({ title: "Uploading & Categorizing...", description: "Please wait while we process your document." });
 
     try {
-        // Upload file to Firebase Storage first to get a persistent URL
         const storageRef = ref(storage, `documents/${user.id}/${Date.now()}_${selectedFile.name}`);
         const uploadResult = await uploadBytes(storageRef, selectedFile);
         const fileUrl = await getDownloadURL(uploadResult.ref);
@@ -72,26 +71,28 @@ export function DocumentManager() {
         const newDocument: DocumentType = {
           id: `doc_${Date.now()}`,
           name: selectedFile.name,
-          url: fileUrl, // Use the public URL from Firebase Storage
+          url: fileUrl,
           uploadedAt: new Date().toISOString(),
           category: scanResult.category,
           extractedText: scanResult.extractedText,
         };
 
-        const updatedDocuments = [...documents, newDocument];
-        await updateUserProfile({ documents: updatedDocuments });
-        setSelectedFile(null); 
-        
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput) {
-            fileInput.value = '';
-        }
+        const result = await addDocument(newDocument);
 
-        toast({ title: "Upload Successful", description: `${newDocument.name} has been automatically categorized as '${newDocument.category}'.` });
+        if (result.success) {
+            setSelectedFile(null); 
+            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            toast({ title: "Upload Successful", description: `${newDocument.name} has been automatically categorized as '${newDocument.category}'.` });
+        } else {
+            throw new Error(result.message);
+        }
 
     } catch (error) {
         console.error("Upload and Scan Error:", error);
-        toast({ title: "Processing Failed", description: "Could not automatically categorize the document. Please try again.", variant: "destructive" });
+        toast({ title: "Processing Failed", description: (error as Error).message || "Could not automatically categorize the document.", variant: "destructive" });
     } finally {
         setIsUploading(false);
     }

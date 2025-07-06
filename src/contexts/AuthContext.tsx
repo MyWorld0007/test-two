@@ -2,10 +2,10 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useState, useEffect } from 'react';
-import type { AuthenticatedUser, EndUserProfile, ConsultantProfile, AdminProfile, UserRole } from '@/lib/types';
+import type { AuthenticatedUser, EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document as DocumentType } from '@/lib/types';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { getUserProfile, createUserProfileDocument, updateUserProfileDocument, createConsultantByAdmin } from '@/lib/firestore';
+import { getUserProfile, createUserProfileDocument, updateUserProfileDocument, addDocumentToUser } from '@/lib/firestore';
 
 interface AuthContextType {
   user: AuthenticatedUser | null;
@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateUserProfile: (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => Promise<void>;
+  addDocument: (document: DocumentType) => Promise<{ success: boolean; message?: string; }>;
   registerWithEmailAndPassword: (email: string, password: string, firstName: string, lastName: string, role: UserRole) => Promise<{ success: boolean; message?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; message?: string }>;
   changeUserPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
@@ -187,8 +188,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addDocument = async (document: DocumentType): Promise<{ success: boolean; message?: string }> => {
+    if (!user || user.role !== 'enduser') {
+      return { success: false, message: 'User is not an end-user.' };
+    }
+    
+    try {
+      // 1. Update Firestore using the robust arrayUnion operation
+      await addDocumentToUser(user.id, document);
+      
+      // 2. Update local state to reflect the change immediately in the UI
+      const currentProfile = user.profile as EndUserProfile;
+      const updatedDocuments = [...(currentProfile.documents || []), document];
+      const newProfile = { ...currentProfile, documents: updatedDocuments };
+      setUser({ ...user, profile: newProfile });
+
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to add document:", error);
+      return { success: false, message: 'Failed to save document to profile.' };
+    }
+  };
+
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUserProfile, registerWithEmailAndPassword, signInWithGoogle, changeUserPassword }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUserProfile, addDocument, registerWithEmailAndPassword, signInWithGoogle, changeUserPassword }}>
       {children}
     </AuthContext.Provider>
   );

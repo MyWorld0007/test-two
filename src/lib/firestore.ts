@@ -13,6 +13,7 @@ import {
   addDoc,
   deleteDoc,
   Timestamp,
+  arrayUnion,
 } from 'firebase/firestore';
 import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
 import { initializeApp, deleteApp } from 'firebase/app';
@@ -147,6 +148,15 @@ export const updateUserProfileDocument = async (uid: string, data: Partial<EndUs
     }
     await updateDoc(userDocRef, dataToUpdate);
 };
+
+export const addDocumentToUser = async (uid: string, newDoc: DocumentType) => {
+  const userDocRef = doc(db, 'users', uid);
+  // Atomically add a new document to the "documents" array field.
+  await updateDoc(userDocRef, {
+    documents: arrayUnion(newDoc)
+  });
+};
+
 
 export const createConsultantByAdmin = async (
   email: string,
