@@ -30,19 +30,34 @@ export function ConsultantProfileForm() {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
 
-  const defaultValues = user?.role === 'consultant' ? {
-    ...(user.profile as ConsultantProfile),
-    email: (user.profile as ConsultantProfile).email,
-  } : {} as ConsultantProfileFormValues;
-
   const form = useForm<ConsultantProfileFormValues>({
     resolver: zodResolver(consultantProfileSchema),
-    defaultValues,
+    defaultValues: {
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      email: '',
+      qualification: '',
+      qualificationNumber: '',
+      totalExperience: 0,
+      specializationField: '',
+    },
   });
 
   useEffect(() => {
     if (user?.role === 'consultant') {
-      form.reset(user.profile as ConsultantProfile);
+      const profile = user.profile as ConsultantProfile;
+      // Reset the form with user data, ensuring no undefined values are passed
+      form.reset({
+        firstName: profile.firstName || '',
+        middleName: profile.middleName || '',
+        lastName: profile.lastName || '',
+        email: profile.email || '',
+        qualification: profile.qualification || '',
+        qualificationNumber: profile.qualificationNumber || '',
+        totalExperience: profile.totalExperience || 0,
+        specializationField: profile.specializationField || '',
+      });
     }
   }, [user, form]);
 
