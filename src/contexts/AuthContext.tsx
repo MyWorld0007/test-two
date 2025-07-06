@@ -5,12 +5,12 @@ import { createContext, useState, useEffect } from 'react';
 import type { AuthenticatedUser, EndUserProfile, ConsultantProfile, AdminProfile, UserRole } from '@/lib/types';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getUserProfile, createUserProfileDocument, updateUserProfileDocument } from '@/lib/firestore';
+import { getUserProfile, createUserProfileDocument, updateUserProfileDocument, createConsultantByAdmin } from '@/lib/firestore';
 
 interface AuthContextType {
   user: AuthenticatedUser | null;
   isLoading: boolean;
-  login: (email: string, passwordHash: string) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateUserProfile: (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => Promise<void>;
   registerWithEmailAndPassword: (email: string, password: string, firstName: string, lastName: string, role: UserRole) => Promise<{ success: boolean; message?: string }>;
@@ -58,10 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, passwordHash: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, passwordHash);
+      await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged will handle setting the user state.
       setIsLoading(false);
       return { success: true };
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // onAuthStateChanged will handle the logic of setting the user or creating a new one
           setIsLoading(false);
           return { success: true };
-      } catch (error: any) {
+      } catch (error: any)          {
           console.error("Google Sign-In Error:", error);
           setIsLoading(false);
           let message = 'An unknown error occurred.';
