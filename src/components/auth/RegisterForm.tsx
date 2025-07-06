@@ -16,6 +16,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { AppLogo } from '@/components/common/AppLogo';
 import { Separator } from '../ui/separator';
 import type { UserRole } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 
 const registerSchema = z.object({
@@ -31,7 +32,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export function RegisterForm() {
   const router = useRouter();
   const { registerWithEmailAndPassword, signInWithGoogle } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -49,25 +50,31 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    setError(null);
     const result = await registerWithEmailAndPassword(data.email, data.password, data.firstName, data.lastName, data.role as UserRole);
     if (result.success) {
       router.push('/dashboard');
     } else {
-      setError(result.message || 'An unexpected error occurred.');
+      toast({
+        title: "Registration Failed",
+        description: result.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
     }
     setIsLoading(false);
   };
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    setError(null);
     // Note: For simplicity, Google sign-up always creates an 'enduser' role.
     const result = await signInWithGoogle();
      if (result.success) {
       router.push('/dashboard');
     } else {
-      setError(result.message || 'An unexpected error occurred.');
+      toast({
+        title: "Sign-up Failed",
+        description: result.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
     }
     setIsGoogleLoading(false);
   }
@@ -178,7 +185,6 @@ export function RegisterForm() {
                   </FormItem>
                 )}
               />
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create Account

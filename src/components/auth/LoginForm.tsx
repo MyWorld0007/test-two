@@ -16,6 +16,7 @@ import { Eye, EyeOff, Loader2, Terminal } from 'lucide-react';
 import { AppLogo } from '@/components/common/AppLogo';
 import { Separator } from '../ui/separator';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from '@/hooks/use-toast';
 
 
 const loginSchema = z.object({
@@ -28,7 +29,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const { login, signInWithGoogle } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -43,24 +44,30 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    setError(null);
     const result = await login(data.email, data.password);
     if (result.success) {
       router.push('/dashboard');
     } else {
-      setError(result.message || 'An unexpected error occurred.');
+      toast({
+        title: "Login Failed",
+        description: result.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
     }
     setIsLoading(false);
   };
   
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    setError(null);
     const result = await signInWithGoogle();
      if (result.success) {
       router.push('/dashboard');
     } else {
-      setError(result.message || 'An unexpected error occurred.');
+      toast({
+        title: "Login Failed",
+        description: result.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
     }
     setIsGoogleLoading(false);
   }
@@ -117,7 +124,6 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Sign In
