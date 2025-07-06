@@ -48,6 +48,7 @@ export interface EndUserProfile {
   sessions: SessionComment[];
   accessRequests: AccessRequest[];
   lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export interface ConsultantProfile {
@@ -63,6 +64,7 @@ export interface ConsultantProfile {
   specializationField: string;
   attendedUsers: { userId: string; name: string; lastViewed: string }[];
   lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export interface AdminProfile {
@@ -71,6 +73,7 @@ export interface AdminProfile {
   name: string;
   email: string;
   lastLoginAt?: string;
+  createdAt?: string;
 }
 
 export interface AuthenticatedUser {

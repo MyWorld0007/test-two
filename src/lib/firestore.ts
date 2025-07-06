@@ -36,14 +36,24 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
         adminId: uid,
         name: name,
         email: email,
+        createdAt: (profileData.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
       };
 
       // Overwrite the incorrect profile with the correct admin profile
-      await setDoc(userDocRef, adminProfile);
+      await setDoc(userDocRef, {...adminProfile, createdAt: profileData.createdAt || Timestamp.now()});
 
       profileData = adminProfile;
       role = 'admin';
     }
+    
+    // Convert Timestamps to ISO strings
+    if (profileData.createdAt && profileData.createdAt instanceof Timestamp) {
+        profileData.createdAt = profileData.createdAt.toDate().toISOString();
+    }
+    if (profileData.lastLoginAt && profileData.lastLoginAt instanceof Timestamp) {
+        profileData.lastLoginAt = profileData.lastLoginAt.toDate().toISOString();
+    }
+
 
     return {
       id: uid,
@@ -66,6 +76,8 @@ export const createUserProfileDocument = async (
 ): Promise<AuthenticatedUser> => {
     let profile: EndUserProfile | ConsultantProfile | AdminProfile;
     let finalRole = role;
+    const creationTimestamp = Timestamp.now();
+
 
     // Special check to enforce admin role for a specific email
     if (email === 'admin@example.com') {
@@ -87,6 +99,7 @@ export const createUserProfileDocument = async (
             documents: [],
             sessions: [],
             accessRequests: [],
+            createdAt: creationTimestamp.toDate().toISOString(),
         };
     } else if (finalRole === 'consultant') { 
         profile = {
@@ -100,18 +113,20 @@ export const createUserProfileDocument = async (
             totalExperience: 0,
             specializationField: '',
             attendedUsers: [],
+            createdAt: creationTimestamp.toDate().toISOString(),
         };
     } else { // admin
         profile = {
             role: 'admin',
             adminId: uid,
             name: `${firstName} ${lastName}`,
-            email
+            email,
+            createdAt: creationTimestamp.toDate().toISOString(),
         }
     }
     // We save the structured profile data to the 'users' collection 
     // with the document ID being the user's authentication UID.
-    await setDoc(doc(db, "users", uid), profile);
+    await setDoc(doc(db, "users", uid), {...profile, createdAt: creationTimestamp});
     
     // We return the complete user object for immediate use in the app.
     return { id: uid, email, role: finalRole, profile };
@@ -120,7 +135,12 @@ export const createUserProfileDocument = async (
 
 export const updateUserProfileDocument = async (uid: string, data: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
     const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, data);
+    // Convert ISO string date back to Firestore Timestamp if present
+    const dataToUpdate = { ...data };
+    if (dataToUpdate.lastLoginAt) {
+      dataToUpdate.lastLoginAt = Timestamp.fromDate(new Date(dataToUpdate.lastLoginAt)) as any;
+    }
+    await updateDoc(userDocRef, dataToUpdate);
 };
 
 export const createConsultantByAdmin = async (
@@ -181,6 +201,28 @@ export const getAllEndUsers = async (): Promise<EndUserProfile[]> => {
     const q = query(usersCollectionRef, where('role', '==', 'enduser'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as EndUserProfile);
+};
+
+export const getNewUsersCount = async (days: number): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const dateLimit = Timestamp.fromDate(d);
+    
+    const q = query(usersCollectionRef, where('role', '==', 'enduser'), where('createdAt', '>=', dateLimit));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+};
+
+export const getNewConsultantsCount = async (days: number): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const dateLimit = Timestamp.fromDate(d);
+
+    const q = query(usersCollectionRef, where('role', '==', 'consultant'), where('createdAt', '>=', dateLimit));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
 };
 
 

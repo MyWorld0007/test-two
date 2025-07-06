@@ -9,12 +9,14 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import { getAllEndUsers, getAllConsultants } from '@/lib/firestore';
+import { getAllEndUsers, getAllConsultants, getNewUsersCount, getNewConsultantsCount } from '@/lib/firestore';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalConsultants, setTotalConsultants] = useState(0);
+  const [newUsersCount, setNewUsersCount] = useState(0);
+  const [newConsultantsCount, setNewConsultantsCount] = useState(0);
   const [isKpiLoading, setIsKpiLoading] = useState(true);
 
   useEffect(() => {
@@ -22,12 +24,16 @@ export default function DashboardPage() {
       const fetchKpis = async () => {
         setIsKpiLoading(true);
         try {
-          const [endUsersData, consultantsData] = await Promise.all([
+          const [endUsersData, consultantsData, newUsers, newConsultants] = await Promise.all([
             getAllEndUsers(),
-            getAllConsultants()
+            getAllConsultants(),
+            getNewUsersCount(7),
+            getNewConsultantsCount(7),
           ]);
           setTotalUsers(endUsersData.length);
           setTotalConsultants(consultantsData.length);
+          setNewUsersCount(newUsers);
+          setNewConsultantsCount(newConsultants);
         } catch (error) {
             console.error("Failed to fetch KPIs:", error);
         } finally {
@@ -110,8 +116,8 @@ export default function DashboardPage() {
                 <UserPlus className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">5</div> {/* Placeholder */}
-                <p className="text-xs text-muted-foreground">Illustrative data</p>
+                {isKpiLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{newUsersCount}</div>}
+                <p className="text-xs text-muted-foreground">in the last 7 days</p>
               </CardContent>
             </Card>
             
@@ -121,8 +127,8 @@ export default function DashboardPage() {
                 <UserPlus className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">2</div> {/* Placeholder */}
-                <p className="text-xs text-muted-foreground">Illustrative data</p>
+                 {isKpiLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{newConsultantsCount}</div>}
+                <p className="text-xs text-muted-foreground">in the last 7 days</p>
               </CardContent>
             </Card>
 
@@ -144,7 +150,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">50</div> {/* Placeholder */}
-                <p className="text-xs text-muted-foreground">Total support queries</p>
+                <p className="text-xs text-muted-foreground">Illustrative data</p>
               </CardContent>
             </Card>
             
@@ -155,7 +161,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">45</div> {/* Placeholder */}
-                <p className="text-xs text-muted-foreground">Resolved support queries</p>
+                <p className="text-xs text-muted-foreground">Illustrative data</p>
               </CardContent>
             </Card>
           </CardContent>
