@@ -81,7 +81,7 @@ export function ReminderManager() {
   };
   
   return (
-    <Card className="shadow-lg mt-6">
+    <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center"><BellRing className="mr-2 h-5 w-5" />Set a Reminder</CardTitle>
         <CardDescription>Add reminders for appointments, medication, or anything else.</CardDescription>

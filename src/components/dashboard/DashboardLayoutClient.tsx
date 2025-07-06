@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/common/AppLogo';
-import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella, Database, UserPlus } from 'lucide-react';
+import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella, Database, UserPlus, BellRing } from 'lucide-react';
 import type { UserRole } from '@/lib/types';
 
 interface NavItem {
@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['enduser', 'consultant', 'admin'] },
   { href: '/dashboard/user/profile', label: 'My Profile', icon: User, roles: ['enduser'] },
   { href: '/dashboard/user/documents', label: 'My Documents', icon: FileText, roles: ['enduser'] },
+  { href: '/dashboard/user/reminders', label: 'Reminders', icon: BellRing, roles: ['enduser'] },
   { href: '/dashboard/user/access', label: 'Access Control', icon: KeyRound, roles: ['enduser'] },
   { href: '/dashboard/user/insurance', label: 'Insurance', icon: Umbrella, roles: ['enduser'] },
   { href: '/dashboard/consultant/profile', label: 'My Profile', icon: User, roles: ['consultant'] },
