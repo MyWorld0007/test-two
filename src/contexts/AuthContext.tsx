@@ -30,8 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userProfile = await getUserProfile(firebaseUser.uid);
         
         if (userProfile) {
-            // Tag the login activity with a timestamp
-           const lastLoginData = { lastLoginAt: new Date().toISOString() };
+            // Tag the login activity with a timestamp and the user's role for clarity.
+           const lastLoginData = { 
+               lastLoginAt: new Date().toISOString(),
+               role: userProfile.role // Explicitly tag the role during login activity
+            };
            await updateUserProfileDocument(firebaseUser.uid, lastLoginData);
            // Update the profile object before setting it in state
            userProfile.profile = { ...userProfile.profile, ...lastLoginData };
