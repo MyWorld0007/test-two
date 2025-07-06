@@ -193,38 +193,37 @@ export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
     const q = query(usersCollectionRef, where('role', '==', 'consultant'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as ConsultantProfile);
+    const consultants: ConsultantProfile[] = [];
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.createdAt && data.createdAt instanceof Timestamp) {
+            data.createdAt = data.createdAt.toDate().toISOString();
+        }
+        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
+            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
+        }
+        consultants.push(data as ConsultantProfile)
+    });
+    return consultants;
 };
 
 export const getAllEndUsers = async (): Promise<EndUserProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
     const q = query(usersCollectionRef, where('role', '==', 'enduser'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as EndUserProfile);
+    const users: EndUserProfile[] = [];
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.createdAt && data.createdAt instanceof Timestamp) {
+            data.createdAt = data.createdAt.toDate().toISOString();
+        }
+        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
+            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
+        }
+        users.push(data as EndUserProfile)
+    });
+    return users;
 };
-
-export const getNewUsersCount = async (days: number): Promise<number> => {
-    const usersCollectionRef = collection(db, 'users');
-    const d = new Date();
-    d.setDate(d.getDate() - days);
-    const dateLimit = Timestamp.fromDate(d);
-    
-    const q = query(usersCollectionRef, where('role', '==', 'enduser'), where('createdAt', '>=', dateLimit));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.size;
-};
-
-export const getNewConsultantsCount = async (days: number): Promise<number> => {
-    const usersCollectionRef = collection(db, 'users');
-    const d = new Date();
-    d.setDate(d.getDate() - days);
-    const dateLimit = Timestamp.fromDate(d);
-
-    const q = query(usersCollectionRef, where('role', '==', 'consultant'), where('createdAt', '>=', dateLimit));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.size;
-};
-
 
 export const findUserByUniqueId = async (uniqueId: string): Promise<EndUserProfile | null> => {
     const usersCollectionRef = collection(db, 'users');

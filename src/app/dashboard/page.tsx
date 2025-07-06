@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import { getAllEndUsers, getAllConsultants, getNewUsersCount, getNewConsultantsCount } from '@/lib/firestore';
+import { getAllEndUsers, getAllConsultants } from '@/lib/firestore';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -24,12 +24,17 @@ export default function DashboardPage() {
       const fetchKpis = async () => {
         setIsKpiLoading(true);
         try {
-          const [endUsersData, consultantsData, newUsers, newConsultants] = await Promise.all([
+          const [endUsersData, consultantsData] = await Promise.all([
             getAllEndUsers(),
             getAllConsultants(),
-            getNewUsersCount(7),
-            getNewConsultantsCount(7),
           ]);
+
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          
+          const newUsers = endUsersData.filter(u => u.createdAt && new Date(u.createdAt) >= sevenDaysAgo).length;
+          const newConsultants = consultantsData.filter(c => c.createdAt && new Date(c.createdAt) >= sevenDaysAgo).length;
+
           setTotalUsers(endUsersData.length);
           setTotalConsultants(consultantsData.length);
           setNewUsersCount(newUsers);
