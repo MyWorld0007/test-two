@@ -23,14 +23,33 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    const profileData = userDocSnap.data() as EndUserProfile | ConsultantProfile | AdminProfile;
-    // Determine role based on the 'role' field in the document
-    const role: UserRole = profileData.role;
+    let profileData = userDocSnap.data();
+    let role = profileData.role;
+    const email = profileData.email;
+
+    // Special check: If the user is admin@example.com but their role isn't 'admin',
+    // this will self-correct the profile in Firestore to be an admin profile.
+    if (email === 'admin@example.com' && role !== 'admin') {
+      const name = profileData.firstName ? `${profileData.firstName} ${profileData.lastName}` : 'Admin User';
+      const adminProfile: AdminProfile = {
+        role: 'admin',
+        adminId: uid,
+        name: name,
+        email: email,
+      };
+
+      // Overwrite the incorrect profile with the correct admin profile
+      await setDoc(userDocRef, adminProfile);
+
+      profileData = adminProfile;
+      role = 'admin';
+    }
+
     return {
       id: uid,
-      email: profileData.email,
+      email: email,
       role: role,
-      profile: profileData,
+      profile: profileData as EndUserProfile | ConsultantProfile | AdminProfile,
     };
   } else {
     // This case might happen if an auth record exists but the firestore doc creation failed.
@@ -152,7 +171,7 @@ export const createConsultantByAdmin = async (
 
 export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
-    const q = query(usersCollectioneRef, where('role', '==', 'consultant'));
+    const q = query(usersCollectionRef, where('role', '==', 'consultant'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as ConsultantProfile);
 };
