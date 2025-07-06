@@ -268,3 +268,49 @@ export const addInsurancePolicy = async (policy: Omit<InsurancePolicy, 'id' | 'c
 export const deleteInsurancePolicy = async (policyId: string): Promise<void> => {
     await deleteDoc(doc(db, "insurancePolicies", policyId));
 };
+
+// ================== KPI Functions ==================
+
+export const getEndUsersCount = async (): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const q = query(usersCollectionRef, where('role', '==', 'enduser'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+};
+
+export const getConsultantsCount = async (): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const q = query(usersCollectionRef, where('role', '==', 'consultant'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+};
+
+export const getNewEndUsersCount = async (days: number): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const dateLimit = Timestamp.fromDate(d);
+    
+    const q = query(
+        usersCollectionRef, 
+        where('role', '==', 'enduser'),
+        where('createdAt', '>=', dateLimit)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+};
+
+export const getNewConsultantsCount = async (days: number): Promise<number> => {
+    const usersCollectionRef = collection(db, 'users');
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const dateLimit = Timestamp.fromDate(d);
+    
+    const q = query(
+        usersCollectionRef, 
+        where('role', '==', 'consultant'),
+        where('createdAt', '>=', dateLimit)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+};
