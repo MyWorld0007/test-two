@@ -1,5 +1,5 @@
 
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import {
   doc,
   getDoc,
@@ -14,6 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 // ================== User Profile Functions ==================
 
@@ -96,6 +97,52 @@ export const updateUserProfileDocument = async (uid: string, data: Partial<EndUs
     const userDocRef = doc(db, 'users', uid);
     await updateDoc(userDocRef, data);
 };
+
+export const createConsultantByAdmin = async (
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    // This creates the user in Firebase Authentication.
+    // NOTE: Using the client SDK for this will sign out the current user (admin)
+    // and sign in the new user. This is a known limitation.
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // This creates the corresponding profile document in Firestore
+    await createUserProfileDocument(
+      userCredential.user.uid,
+      email,
+      firstName,
+      lastName,
+      'consultant'
+    );
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Admin Consultant Creation Error:", error);
+    let message = 'An unknown error occurred.';
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        message = 'This email address is already registered.';
+        break;
+      case 'auth/invalid-email':
+        message = 'The email address is not valid.';
+        break;
+      case 'auth/weak-password':
+        message = 'The password is too weak. It must be at least 8 characters long.';
+        break;
+      case 'auth/operation-not-allowed':
+          message = 'Email/Password sign-up is not enabled in the Firebase Console.';
+          break;
+      default:
+        message = 'Failed to create consultant. Please try again.';
+    }
+    return { success: false, message };
+  }
+};
+
 
 export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
