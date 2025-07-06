@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import {
   doc,
@@ -46,6 +47,8 @@ export const createUserProfileDocument = async (
   role: UserRole
 ): Promise<AuthenticatedUser> => {
     let profile: EndUserProfile | ConsultantProfile | AdminProfile;
+
+    // Based on the user's role, we create a different data structure.
     if (role === 'enduser') {
         profile = {
             userId: uid,
@@ -60,7 +63,7 @@ export const createUserProfileDocument = async (
             sessions: [],
             accessRequests: [],
         };
-    } else if (role === 'consultant') { // consultant
+    } else if (role === 'consultant') { 
         profile = {
             consultantId: uid,
             firstName,
@@ -79,7 +82,11 @@ export const createUserProfileDocument = async (
             email
         }
     }
+    // We save the structured profile data to the 'users' collection 
+    // with the document ID being the user's authentication UID.
     await setDoc(doc(db, "users", uid), profile);
+    
+    // We return the complete user object for immediate use in the app.
     return { id: uid, email, role, profile };
 };
 
