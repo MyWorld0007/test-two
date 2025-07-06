@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Eye, Loader2 } from 'lucide-react';
-import { getAllUsers } from '@/lib/firestore';
+import { getAllConsultants } from '@/lib/firestore';
 import type { ConsultantProfile } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -18,8 +18,7 @@ export default function AdminManageConsultantsPage() {
     const fetchConsultants = async () => {
       setIsLoading(true);
       try {
-        const allUsers = await getAllUsers();
-        const consultantProfiles = allUsers.filter(u => 'consultantId' in u) as ConsultantProfile[];
+        const consultantProfiles = await getAllConsultants();
         setConsultants(consultantProfiles);
       } catch (error) {
         console.error("Failed to fetch consultants:", error);

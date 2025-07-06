@@ -32,6 +32,7 @@ export interface SessionComment {
 }
 
 export interface EndUserProfile {
+  role: 'enduser';
   userId: string;
   uniqueId: string;
   firstName: string;
@@ -50,6 +51,7 @@ export interface EndUserProfile {
 }
 
 export interface ConsultantProfile {
+  role: 'consultant';
   consultantId: string;
   firstName: string;
   middleName?: string;
@@ -64,6 +66,7 @@ export interface ConsultantProfile {
 }
 
 export interface AdminProfile {
+  role: 'admin';
   adminId: string;
   name: string;
   email: string;

@@ -23,10 +23,8 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
 
   if (userDocSnap.exists()) {
     const profileData = userDocSnap.data() as EndUserProfile | ConsultantProfile | AdminProfile;
-    // Determine role based on unique key existence
-    const role: UserRole = (profileData as EndUserProfile).userId ? 'enduser' 
-                         : (profileData as ConsultantProfile).consultantId ? 'consultant' 
-                         : 'admin';
+    // Determine role based on the 'role' field in the document
+    const role: UserRole = profileData.role;
     return {
       id: uid,
       email: profileData.email,
@@ -51,6 +49,7 @@ export const createUserProfileDocument = async (
     // Based on the user's role, we create a different data structure.
     if (role === 'enduser') {
         profile = {
+            role: 'enduser',
             userId: uid,
             uniqueId: `EU${Date.now().toString().slice(-5)}`,
             firstName,
@@ -65,6 +64,7 @@ export const createUserProfileDocument = async (
         };
     } else if (role === 'consultant') { 
         profile = {
+            role: 'consultant',
             consultantId: uid,
             firstName,
             lastName,
@@ -77,6 +77,7 @@ export const createUserProfileDocument = async (
         };
     } else { // admin
         profile = {
+            role: 'admin',
             adminId: uid,
             name: `${firstName} ${lastName}`,
             email
@@ -96,18 +97,20 @@ export const updateUserProfileDocument = async (uid: string, data: Partial<EndUs
     await updateDoc(userDocRef, data);
 };
 
-export const getAllUsers = async (): Promise<(EndUserProfile | ConsultantProfile)[]> => {
+export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
-    // Simple query to get all non-admin users
-    const q = query(usersCollectionRef, where('email', '!=', 'admin@example.com'));
-    
+    const q = query(usersCollectionRef, where('role', '==', 'consultant'));
     const querySnapshot = await getDocs(q);
-    const users: (EndUserProfile | ConsultantProfile)[] = [];
-    querySnapshot.forEach((doc) => {
-        users.push(doc.data() as EndUserProfile | ConsultantProfile);
-    });
-    return users;
+    return querySnapshot.docs.map(doc => doc.data() as ConsultantProfile);
 };
+
+export const getAllEndUsers = async (): Promise<EndUserProfile[]> => {
+    const usersCollectionRef = collection(db, 'users');
+    const q = query(usersCollectionRef, where('role', '==', 'enduser'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.data() as EndUserProfile);
+};
+
 
 export const findUserByUniqueId = async (uniqueId: string): Promise<EndUserProfile | null> => {
     const usersCollectionRef = collection(db, 'users');

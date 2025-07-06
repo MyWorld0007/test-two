@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import { getAllUsers } from '@/lib/firestore';
+import { getAllEndUsers, getAllConsultants } from '@/lib/firestore';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -21,10 +21,18 @@ export default function DashboardPage() {
     if (user?.role === 'admin') {
       const fetchKpis = async () => {
         setIsKpiLoading(true);
-        const allUsers = await getAllUsers();
-        setTotalUsers(allUsers.filter(u => 'userId' in u).length);
-        setTotalConsultants(allUsers.filter(u => 'consultantId' in u).length);
-        setIsKpiLoading(false);
+        try {
+          const [endUsersData, consultantsData] = await Promise.all([
+            getAllEndUsers(),
+            getAllConsultants()
+          ]);
+          setTotalUsers(endUsersData.length);
+          setTotalConsultants(consultantsData.length);
+        } catch (error) {
+            console.error("Failed to fetch KPIs:", error);
+        } finally {
+            setIsKpiLoading(false);
+        }
       }
       fetchKpis();
     }

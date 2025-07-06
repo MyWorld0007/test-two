@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Eye, Loader2 } from 'lucide-react';
-import { getAllUsers } from '@/lib/firestore';
+import { getAllEndUsers } from '@/lib/firestore';
 import type { EndUserProfile } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -19,8 +19,7 @@ export default function AdminManageUsersPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const allUsers = await getAllUsers();
-        const endUserProfiles = allUsers.filter(u => 'userId' in u) as EndUserProfile[];
+        const endUserProfiles = await getAllEndUsers();
         setUsers(endUserProfiles);
       } catch (error) {
         console.error("Failed to fetch users:", error);
