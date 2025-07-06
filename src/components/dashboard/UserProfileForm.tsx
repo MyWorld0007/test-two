@@ -36,24 +36,31 @@ export function UserProfileForm() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   
-  const defaultValues = user?.role === 'enduser' ? {
-    ...(user.profile as EndUserProfile),
-    email: (user.profile as EndUserProfile).email, 
-    uniqueId: (user.profile as EndUserProfile).uniqueId,
-  } : {} as ProfileFormValues;
-
+  const getSafeProfileDefaults = (profile?: EndUserProfile): ProfileFormValues => {
+    return {
+      uniqueId: profile?.uniqueId || '',
+      firstName: profile?.firstName || '',
+      middleName: profile?.middleName || '',
+      lastName: profile?.lastName || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
+      age: profile?.age || 0,
+      gender: profile?.gender || 'Other',
+      diseName: profile?.diseName || '',
+      stage: profile?.stage || '',
+    };
+  };
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues,
+    defaultValues: getSafeProfileDefaults(
+      user?.role === 'enduser' ? (user.profile as EndUserProfile) : undefined
+    ),
   });
 
   useEffect(() => {
     if (user?.role === 'enduser') {
-      form.reset({
-        ...(user.profile as EndUserProfile),
-        uniqueId: (user.profile as EndUserProfile).uniqueId, // Ensure uniqueId is reset
-      });
+      form.reset(getSafeProfileDefaults(user.profile as EndUserProfile));
     }
   }, [user, form, isEditing]); // Add isEditing to dependencies to reset form on cancel
 
@@ -181,7 +188,7 @@ export function UserProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={!isEditing}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
