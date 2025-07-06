@@ -219,6 +219,24 @@ export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     return consultants;
 };
 
+export const getAllAdmins = async (): Promise<AdminProfile[]> => {
+    const usersCollectionRef = collection(db, 'users');
+    const q = query(usersCollectionRef, where('role', '==', 'admin'));
+    const querySnapshot = await getDocs(q);
+    const admins: AdminProfile[] = [];
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.createdAt && data.createdAt instanceof Timestamp) {
+            data.createdAt = data.createdAt.toDate().toISOString();
+        }
+        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
+            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
+        }
+        admins.push(data as AdminProfile)
+    });
+    return admins;
+};
+
 export const getAllEndUsers = async (): Promise<EndUserProfile[]> => {
     const usersCollectionRef = collection(db, 'users');
     const q = query(usersCollectionRef, where('role', '==', 'enduser'));
