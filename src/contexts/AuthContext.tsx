@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { createContext, useState, useEffect } from 'react';
 import type { AuthenticatedUser, EndUserProfile, ConsultantProfile, AdminProfile, UserRole } from '@/lib/types';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { getUserProfile, createUserProfileDocument, updateUserProfileDocument, createConsultantByAdmin } from '@/lib/firestore';
 
 interface AuthContextType {
@@ -15,6 +15,7 @@ interface AuthContextType {
   updateUserProfile: (updatedProfileData: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => Promise<void>;
   registerWithEmailAndPassword: (email: string, password: string, firstName: string, lastName: string, role: UserRole) => Promise<{ success: boolean; message?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; message?: string }>;
+  changeUserPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         message = 'Please enter a valid email address.';
       } else if (error.code === 'auth/operation-not-allowed') {
         message = 'Email/Password sign-in is not enabled. Please enable it in the Firebase Console.';
+      } else {
+        console.error("Firebase Login Error:", error);
       }
 
       return { success: false, message };
@@ -143,6 +146,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { success: false, message };
       }
   };
+  
+  const changeUserPassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      return { success: false, message: 'No user is currently signed in.' };
+    }
+
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+
+    try {
+      await reauthenticateWithCredential(user, credential);
+      // User re-authenticated, now they can change the password
+      await updatePassword(user, newPassword);
+      return { success: true, message: 'Password updated successfully.' };
+    } catch (error: any) {
+      let message = 'An error occurred. Please try again.';
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = 'The current password you entered is incorrect.';
+      } else if (error.code === 'auth/weak-password') {
+          message = 'The new password is too weak. It must be at least 8 characters long.'
+      }
+      console.error("Password Change Error:", error);
+      return { success: false, message };
+    }
+  };
 
   const logout = async () => {
     await signOut(auth);
@@ -160,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUserProfile, registerWithEmailAndPassword, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, updateUserProfile, registerWithEmailAndPassword, signInWithGoogle, changeUserPassword }}>
       {children}
     </AuthContext.Provider>
   );
