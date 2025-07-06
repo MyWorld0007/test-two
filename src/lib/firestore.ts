@@ -84,6 +84,8 @@ export const createUserProfileDocument = async (
     // Special check to enforce admin role for a specific email
     if (email === 'admin@example.com') {
       finalRole = 'admin';
+    } else if (email.toLowerCase().endsWith('@mydc.com')) {
+      finalRole = 'consultant';
     }
 
     // Based on the user's role, we create a different data structure.
