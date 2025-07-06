@@ -30,6 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let userProfile = await getUserProfile(firebaseUser.uid);
         
         if (userProfile) {
+            // Tag the login activity with a timestamp
+           const lastLoginData = { lastLoginAt: new Date().toISOString() };
+           await updateUserProfileDocument(firebaseUser.uid, lastLoginData);
+           // Update the profile object before setting it in state
+           userProfile.profile = { ...userProfile.profile, ...lastLoginData };
            setUser(userProfile);
         } else {
             // This is a new user (likely via Google sign-in) who doesn't have a profile doc yet.

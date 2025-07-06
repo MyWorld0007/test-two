@@ -46,6 +46,7 @@ export interface EndUserProfile {
   documents: Document[];
   sessions: SessionComment[];
   accessRequests: AccessRequest[];
+  lastLoginAt?: string;
 }
 
 export interface ConsultantProfile {
@@ -59,12 +60,14 @@ export interface ConsultantProfile {
   totalExperience: number; // years
   specializationField: string;
   attendedUsers: { userId: string; name: string; lastViewed: string }[];
+  lastLoginAt?: string;
 }
 
 export interface AdminProfile {
   adminId: string;
   name: string;
   email: string;
+  lastLoginAt?: string;
 }
 
 export interface AuthenticatedUser {
