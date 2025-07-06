@@ -1,5 +1,6 @@
 
-import { db, firebaseConfig } from './firebase';
+
+import { db, firebaseConfig, auth } from './firebase';
 import {
   doc,
   getDoc,
@@ -15,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 
 
 // ================== User Profile Functions ==================
@@ -199,6 +200,20 @@ export const createConsultantByAdmin = async (
         message = 'Failed to create consultant. Please try again.';
     }
     return { success: false, message };
+  }
+};
+
+export const sendPasswordResetLink = async (email: string): Promise<{ success: boolean; message?: string }> => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Password Reset Error:", error);
+    let message = "An error occurred while sending the password reset email.";
+    if (error.code === 'auth/user-not-found') {
+        message = "There is no user corresponding to the given email."
+    }
+    return { success: false, message: message };
   }
 };
 

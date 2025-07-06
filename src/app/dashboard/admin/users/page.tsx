@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Eye, Loader2, User, Briefcase, Shield } from 'lucide-react';
-import { getAllEndUsers, getAllConsultants, getAllAdmins } from '@/lib/firestore';
+import { Edit, Trash2, Eye, Loader2, User, Briefcase, Shield, KeySquare } from 'lucide-react';
+import { getAllEndUsers, getAllConsultants, getAllAdmins, sendPasswordResetLink } from '@/lib/firestore';
 import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 export default function AdminManageUsersPage() {
@@ -65,6 +66,26 @@ export default function AdminManageUsersPage() {
 
   const handleViewUser = (userId: string) => {
     alert(`View user: ${userId} (not implemented)`);
+  };
+
+  const handleResetPassword = async (email: string) => {
+    if (!email) {
+      toast({ title: 'Error', description: 'User email not found.', variant: 'destructive' });
+      return;
+    }
+    const result = await sendPasswordResetLink(email);
+    if (result.success) {
+      toast({
+        title: 'Success',
+        description: `A password reset link has been sent to ${email}.`,
+      });
+    } else {
+      toast({
+        title: 'Failed',
+        description: result.message,
+        variant: 'destructive',
+      });
+    }
   };
 
 
@@ -122,6 +143,27 @@ export default function AdminManageUsersPage() {
                                 <Button variant="ghost" size="icon" onClick={() => handleEditUser(user.userId)} title="Edit User">
                                     <Edit className="h-4 w-4" />
                                 </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" title="Reset Password">
+                                            <KeySquare className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        This will send a password reset link to {user.email}. The user will be prompted to choose a new password. You will not see the new password.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleResetPassword(user.email)}>
+                                        Send Link
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteUser(user.userId, 'enduser')} title="Delete User">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -170,6 +212,27 @@ export default function AdminManageUsersPage() {
                                 <Button variant="ghost" size="icon" onClick={() => handleEditUser(consultant.consultantId)} title="Edit Consultant">
                                     <Edit className="h-4 w-4" />
                                 </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" title="Reset Password">
+                                            <KeySquare className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        This will send a password reset link to {consultant.email}. The consultant will be prompted to choose a new password. You will not see the new password.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleResetPassword(consultant.email)}>
+                                        Send Link
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteUser(consultant.consultantId, 'consultant')} title="Delete Consultant">
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
