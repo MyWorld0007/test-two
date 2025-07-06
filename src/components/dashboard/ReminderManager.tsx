@@ -132,7 +132,7 @@ export function ReminderManager() {
                     control={form.control}
                     name="date"
                     render={({ field }) => (
-                        <FormItem className="flex flex-col">
+                        <FormItem>
                         <FormLabel>Date</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
@@ -140,7 +140,7 @@ export function ReminderManager() {
                                 <Button
                                 variant={"outline"}
                                 className={cn(
-                                    "pl-3 text-left font-normal",
+                                    "w-full justify-start pl-3 text-left font-normal",
                                     !field.value && "text-muted-foreground"
                                 )}
                                 >
