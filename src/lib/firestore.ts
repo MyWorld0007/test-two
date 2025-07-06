@@ -46,9 +46,15 @@ export const createUserProfileDocument = async (
   role: UserRole
 ): Promise<AuthenticatedUser> => {
     let profile: EndUserProfile | ConsultantProfile | AdminProfile;
+    let finalRole = role;
+
+    // Special check to enforce admin role for a specific email
+    if (email === 'admin@example.com') {
+      finalRole = 'admin';
+    }
 
     // Based on the user's role, we create a different data structure.
-    if (role === 'enduser') {
+    if (finalRole === 'enduser') {
         profile = {
             role: 'enduser',
             userId: uid,
@@ -63,7 +69,7 @@ export const createUserProfileDocument = async (
             sessions: [],
             accessRequests: [],
         };
-    } else if (role === 'consultant') { 
+    } else if (finalRole === 'consultant') { 
         profile = {
             role: 'consultant',
             consultantId: uid,
@@ -89,7 +95,7 @@ export const createUserProfileDocument = async (
     await setDoc(doc(db, "users", uid), profile);
     
     // We return the complete user object for immediate use in the app.
-    return { id: uid, email, role, profile };
+    return { id: uid, email, role: finalRole, profile };
 };
 
 
