@@ -66,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return { success: true };
     } catch (error: any) {
-      console.error("Firebase Login Error:", error);
       setIsLoading(false);
       
       let message = 'Failed to log in. Please try again later.';
