@@ -31,6 +31,12 @@ export interface SessionComment {
   timestamp: string;
 }
 
+export interface Reminder {
+  id: string;
+  title: string;
+  dateTime: string;
+}
+
 export interface EndUserProfile {
   role: 'enduser';
   userId: string;
@@ -47,6 +53,7 @@ export interface EndUserProfile {
   documents: Document[];
   sessions: SessionComment[];
   accessRequests: AccessRequest[];
+  reminders?: Reminder[];
   lastLoginAt?: string;
   createdAt?: string;
 }
