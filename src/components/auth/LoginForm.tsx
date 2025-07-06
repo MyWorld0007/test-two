@@ -135,13 +135,8 @@ export function LoginForm() {
             Google
         </Button>
       </CardContent>
-      <CardFooter className="flex flex-col text-sm gap-4">
+      <CardFooter className="flex flex-col text-sm gap-2">
         <p>Don't have an account? <Link href="/register" className="font-medium text-primary hover:underline">Sign up</Link></p>
-        <div className="text-xs text-muted-foreground text-center">
-          <p>Demo End User: enduser@example.com / Test@1234</p>
-          <p>Demo Consultant: consultant@example.com / Consult@1234</p>
-          <p>Demo Admin: admin@example.com / Admin@1234</p>
-        </div>
       </CardFooter>
     </Card>
   );
