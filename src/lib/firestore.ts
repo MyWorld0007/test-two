@@ -1,5 +1,5 @@
 
-import { db, auth } from './firebase';
+import { db, firebaseConfig } from './firebase';
 import {
   doc,
   getDoc,
@@ -14,7 +14,9 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+
 
 // ================== User Profile Functions ==================
 
@@ -149,13 +151,17 @@ export const createConsultantByAdmin = async (
   firstName: string,
   lastName: string
 ): Promise<{ success: boolean; message?: string }> => {
+  // Create a temporary secondary Firebase app. This allows us to create a new user
+  // without affecting the currently logged-in admin's authentication state.
+  const tempAppName = `temp-app-create-consultant-${Date.now()}`;
+  const tempApp = initializeApp(firebaseConfig, tempAppName);
+  const tempAuth = getAuth(tempApp);
+
   try {
-    // This creates the user in Firebase Authentication.
-    // NOTE: Using the client SDK for this will sign out the current user (admin)
-    // and sign in the new user. This is a known limitation.
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // This creates the user in Firebase Authentication using the temporary app instance.
+    const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
     
-    // This creates the corresponding profile document in Firestore
+    // This creates the corresponding profile document in Firestore using the main db instance.
     await createUserProfileDocument(
       userCredential.user.uid,
       email,
@@ -164,9 +170,15 @@ export const createConsultantByAdmin = async (
       'consultant'
     );
     
+    // Clean up the temporary app instance after successful creation.
+    await deleteApp(tempApp);
     return { success: true };
   } catch (error: any) {
     console.error("Admin Consultant Creation Error:", error);
+    
+    // Ensure the temporary app is cleaned up even if an error occurs.
+    await deleteApp(tempApp);
+
     let message = 'An unknown error occurred.';
     switch (error.code) {
       case 'auth/email-already-in-use':

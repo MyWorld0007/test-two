@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { createConsultantByAdmin } from '@/lib/firestore';
 import { Loader2, UserPlus, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
 
 const createConsultantSchema = z.object({
   firstName: z.string().min(1, 'First name is required.'),
@@ -26,8 +24,6 @@ type FormValues = z.infer<typeof createConsultantSchema>;
 
 export default function CreateConsultantPage() {
   const { toast } = useToast();
-  const { logout } = useAuth();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,18 +45,17 @@ export default function CreateConsultantPage() {
     if (result.success) {
       toast({
         title: 'Consultant Created',
-        description: `Account for ${data.email} has been created. As a security measure, you have been logged out. Please log back in.`,
+        description: `Account for ${data.email} has been created. You remain logged in.`,
       });
-      await logout(); // Explicitly log out the newly created user session to complete the process securely
-      router.push('/login');
+      form.reset();
     } else {
       toast({
         title: 'Creation Failed',
         description: result.message || 'An error occurred.',
         variant: 'destructive',
       });
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   return (

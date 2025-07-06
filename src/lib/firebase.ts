@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDxHgyr-w-p41_DNY_mpDQbFpCL3azyYuM",
   authDomain: "mydocula.firebaseapp.com",
   databaseURL: "https://mydocula-default-rtdb.asia-southeast1.firebasedatabase.app",
