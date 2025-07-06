@@ -68,22 +68,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error("Firebase Login Error:", error);
       setIsLoading(false);
-      let message = 'An unknown error occurred.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          message = 'Invalid email or password.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'auth/operation-not-allowed':
-          message = 'Email/Password sign-in is not enabled. Please enable it in the Firebase Console.';
-          break;
-        default:
-          message = 'Failed to log in. Please try again later.';
+      
+      let message = 'Failed to log in. Please try again later.';
+      const invalidCredentialCodes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'];
+
+      if (invalidCredentialCodes.includes(error.code)) {
+        message = 'Invalid email or password.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        message = 'Email/Password sign-in is not enabled. Please enable it in the Firebase Console.';
       }
+
       return { success: false, message };
     }
   };
