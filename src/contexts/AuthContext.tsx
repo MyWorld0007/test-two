@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           message = 'Please enter a valid email address.';
           break;
         case 'auth/operation-not-allowed':
-          message = 'Email/Password sign-in is not enabled for this project.';
+          message = 'Email/Password sign-in is not enabled. Please enable it in the Firebase Console.';
           break;
         default:
           message = 'Failed to log in. Please try again later.';
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             message = 'The password is too weak.';
             break;
         case 'auth/operation-not-allowed':
-          message = 'Email/Password sign-up is not enabled for this project.';
+          message = 'Email/Password sign-up is not enabled. Please enable it in the Firebase Console.';
           break;
         default:
           message = 'Failed to register. Please try again later.';
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           let message = 'An unknown error occurred.';
           switch(error.code) {
             case 'auth/operation-not-allowed':
-              message = 'Google Sign-In is not enabled for this project.';
+              message = 'Google Sign-In is not enabled. Please enable it in the Firebase Console.';
               break;
             case 'auth/popup-closed-by-user':
               message = 'Sign-in window was closed before completion.';
