@@ -16,7 +16,12 @@ const SummarizeTextInputSchema = z.object({
 export type SummarizeTextInput = z.infer<typeof SummarizeTextInputSchema>;
 
 const SummarizeTextOutputSchema = z.object({
-  summary: z.string().describe('The summarized text in simple, easy-to-understand language.'),
+  summary: z.string().describe(`The summarized text in a specific format:
+Name: [Patient name]
+Age: [age of patient]
+Hospital/Clinic Name: [name of clinic/hospital]
+Outcome/Conclusion: [final impression]
+Other findings: [other findings]`),
 });
 export type SummarizeTextOutput = z.infer<typeof SummarizeTextOutputSchema>;
 
@@ -33,6 +38,14 @@ const summarizeTextPrompt = ai.definePrompt({
   Avoid jargon where possible, or explain it clearly if it's necessary.
   Crucially, convert common medical abbreviations into their full, understandable terms (e.g., "CA" should be explained as "cancer").
   The goal is to make the information accessible to someone without a medical background.
+
+  The output MUST be in the following format. Extract the relevant information from the text to fill in the placeholders. If information is not available for a field, write "N/A".
+
+  Name: [Patient name]
+  Age: [age of patient]
+  Hospital/Clinic Name: [name of clinic/hospital which is always mentioned on top side]
+  Outcome/Conclusion: [final impression such as patient has [disease name] or related to it.]
+  Other findings: [Here mentioned other findings]
 
   Medical Report Text:
   {{{textToSummarize}}}
