@@ -1,4 +1,4 @@
-import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus, DocumentCategory, InsurancePolicy } from './types';
+import type { EndUserProfile, ConsultantProfile, AdminProfile, UserRole, Document, SessionComment, AccessRequest, AccessRequestStatus, DocumentCategory, InsurancePolicy, AuthenticatedUser } from './types';
 
 export const demoEndUser: EndUserProfile = {
   userId: 'user1',
@@ -40,7 +40,7 @@ export const demoAdmin: AdminProfile = {
   email: 'admin@example.com',
 };
 
-export const mockUsersDatabase: Record<string, { passwordHash: string; role: UserRole; profileData: EndUserProfile | ConsultantProfile | AdminProfile }> = {
+export let mockUsersDatabase: Record<string, { passwordHash: string; role: UserRole; profileData: EndUserProfile | ConsultantProfile | AdminProfile }> = {
   'enduser@example.com': {
     passwordHash: 'Test@1234', // In a real app, this would be a bcrypt hash
     role: 'enduser',
@@ -84,6 +84,65 @@ export let insurancePolicies: InsurancePolicy[] = [
     createdAt: new Date('2023-08-20T14:30:00Z').toISOString(),
   }
 ];
+
+export const getProfileByEmail = (email: string): AuthenticatedUser | null => {
+  const dbUser = mockUsersDatabase[email.toLowerCase()];
+  if (dbUser) {
+    return {
+      id: (dbUser.profileData as any).userId || (dbUser.profileData as any).consultantId || (dbUser.profileData as any).adminId,
+      email: email.toLowerCase(),
+      role: dbUser.role,
+      profile: dbUser.profileData,
+    };
+  }
+  return null;
+};
+
+export const createNewUser = (email: string, firstName: string, lastName: string, role: UserRole): AuthenticatedUser => {
+    const lowerEmail = email.toLowerCase();
+    let profile: EndUserProfile | ConsultantProfile;
+    let id: string;
+
+    if (role === 'enduser') {
+        id = `user_${Date.now()}`;
+        profile = {
+            userId: id,
+            uniqueId: `EU${Date.now().toString().slice(-5)}`,
+            firstName,
+            lastName,
+            email: lowerEmail,
+            phone: '',
+            age: 0,
+            gender: 'Other',
+            documents: [],
+            sessions: [],
+            accessRequests: [],
+        };
+        endUserProfiles.push(profile);
+    } else { // consultant
+        id = `consultant_${Date.now()}`;
+        profile = {
+            consultantId: id,
+            firstName,
+            lastName,
+            email: lowerEmail,
+            qualification: '',
+            qualificationNumber: '',
+            totalExperience: 0,
+            specializationField: '',
+            attendedUsers: [],
+        };
+        consultantProfiles.push(profile);
+    }
+
+    mockUsersDatabase[lowerEmail] = {
+        passwordHash: '', // Handled by Firebase Auth
+        role: role,
+        profileData: profile,
+    };
+    
+    return { id, email: lowerEmail, role, profile };
+};
 
 
 // Helper function to update mock data (e.g., after profile edit or document upload)
