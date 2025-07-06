@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 export function DocumentManager() {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
-  const [documents, setDocuments] = useState<DocumentType[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -32,16 +31,12 @@ export function DocumentManager() {
   const [newFileName, setNewFileName] = useState('');
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
-  useEffect(() => {
-    if (user?.role === 'enduser') {
-      setDocuments((user.profile as EndUserProfile).documents || []);
-    }
-  }, [user]);
+  // Get documents directly from the auth context user profile to ensure it's always in sync.
+  const documents: DocumentType[] = (user?.role === 'enduser' && (user.profile as EndUserProfile).documents) ? (user.profile as EndUserProfile).documents : [];
 
   if (user?.role !== 'enduser') {
     return <p>Document management is only available for End Users.</p>;
   }
-  const userProfile = user.profile as EndUserProfile;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -85,7 +80,6 @@ export function DocumentManager() {
 
         const updatedDocuments = [...documents, newDocument];
         await updateUserProfile({ documents: updatedDocuments });
-        // No need for setDocuments, AuthProvider state change will trigger re-render
         setSelectedFile(null); 
         
         const fileInput = document.getElementById('file-upload') as HTMLInputElement;
@@ -110,12 +104,8 @@ export function DocumentManager() {
 
     if (!textToSummarize) {
       // If there's no extracted text, we must fetch the document and scan it.
-      // This requires the document to be accessible, which it is via the Firebase Storage URL.
       let base64data: string;
       try {
-        // Since CORS might be an issue, we'll proxy the fetch via a serverless function in a real app.
-        // For this demo, we'll assume direct access or use the stored data URI if available.
-        // A better approach is to use a cloud function to generate a base64 string on upload.
         toast({ title: "Scan Required", description: "Document needs to be scanned first. This may take a moment."});
         const response = await fetch(doc.url);
         const blob = await response.blob();
