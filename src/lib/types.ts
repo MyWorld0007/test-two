@@ -54,6 +54,7 @@ export interface EndUserProfile {
   sessions: SessionComment[];
   accessRequests: AccessRequest[];
   reminders?: Reminder[];
+  preferredLanguage?: string;
   lastLoginAt?: string;
   createdAt?: string;
 }

@@ -27,6 +27,7 @@ const profileSchema = z.object({
   gender: z.enum(['Male', 'Female', 'Other']),
   diseName: z.string().optional(),
   stage: z.string().optional(),
+  preferredLanguage: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -48,6 +49,7 @@ export function UserProfileForm() {
       gender: profile?.gender || 'Other',
       diseName: profile?.diseName || '',
       stage: profile?.stage || '',
+      preferredLanguage: profile?.preferredLanguage || 'English',
     };
   };
 
@@ -225,6 +227,35 @@ export function UserProfileForm() {
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+              <FormField
+                  control={form.control}
+                  name="preferredLanguage"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Preferred Language</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing}>
+                      <FormControl>
+                          <SelectTrigger>
+                          <SelectValue placeholder="Select language" />
+                          </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                          <SelectItem value="English">English</SelectItem>
+                          <SelectItem value="Hindi">Hindi (हिन्दी)</SelectItem>
+                          <SelectItem value="Bengali">Bengali (বাংলা)</SelectItem>
+                          <SelectItem value="Marathi">Marathi (मराठी)</SelectItem>
+                          <SelectItem value="Telugu">Telugu (తెలుగు)</SelectItem>
+                          <SelectItem value="Tamil">Tamil (தமிழ்)</SelectItem>
+                          <SelectItem value="Gujarati">Gujarati (ગુજરાતી)</SelectItem>
+                          <SelectItem value="Kannada">Kannada (ಕನ್ನಡ)</SelectItem>
+                          <SelectItem value="Malayalam">Malayalam (മലയാളം)</SelectItem>
+                          <SelectItem value="Punjabi">Punjabi (ਪੰਜਾਬੀ)</SelectItem>
+                      </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+                  )}
               />
             </div>
             <div className="flex justify-end gap-2">
