@@ -92,6 +92,24 @@ export function UserProfileForm() {
     }
   };
 
+  const handleLanguageChange = async (language: string) => {
+    if (!user || user.role !== 'enduser') return;
+
+    try {
+      await updateUserProfile({ preferredLanguage: language });
+      toast({
+        title: 'Language Updated',
+        description: `Your preferred language has been saved as ${language}.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Update Failed',
+        description: 'Could not save your language preference.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleCancel = () => {
     setIsEditing(false);
     // Form reset is handled by useEffect
@@ -234,7 +252,13 @@ export function UserProfileForm() {
                   render={({ field }) => (
                   <FormItem>
                       <FormLabel>Preferred Language</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing}>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleLanguageChange(value);
+                        }}
+                        value={field.value}
+                      >
                       <FormControl>
                           <SelectTrigger>
                           <SelectValue placeholder="Select language" />
