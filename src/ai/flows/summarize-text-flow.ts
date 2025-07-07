@@ -12,6 +12,7 @@ import {z} from 'zod';
 
 const SummarizeTextInputSchema = z.object({
   textToSummarize: z.string().describe('The text content to be summarized.'),
+  language: z.string().optional().describe('The target language for the summary (e.g., "Hindi", "Tamil"). Defaults to English if not provided.'),
 });
 export type SummarizeTextInput = z.infer<typeof SummarizeTextInputSchema>;
 
@@ -35,11 +36,12 @@ const summarizeTextPrompt = ai.definePrompt({
   output: {schema: SummarizeTextOutputSchema},
   prompt: `You are a helpful assistant who is an expert at explaining complex medical documents to patients.
   Summarize the following medical report text in simple, easy-to-understand terms.
+  The summary MUST be in {{#if language}}{{language}}{{else}}English{{/if}}.
   Avoid jargon where possible, or explain it clearly if it's necessary.
   Crucially, convert common medical abbreviations into their full, understandable terms (e.g., "CA" should be explained as "cancer").
   The goal is to make the information accessible to someone without a medical background.
 
-  The output MUST be in the following format. Extract the relevant information from the text to fill in the placeholders. If information is not available for a field, write "N/A".
+  The output MUST be in the following format, translated into {{#if language}}{{language}}{{else}}English{{/if}}. Extract the relevant information from the text to fill in the placeholders. If information is not available for a field, write "N/A" (or its equivalent in the target language).
 
   Name: [Patient name]
   Age: [age of patient]

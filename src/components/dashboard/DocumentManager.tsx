@@ -35,6 +35,7 @@ export function DocumentManager() {
   if (user?.role !== 'enduser') {
     return <p>Document management is only available for End Users.</p>;
   }
+  const userProfile = user.profile as EndUserProfile;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -125,7 +126,10 @@ export function DocumentManager() {
       setIsSummarizing(true);
       setViewingDocument(doc);
 
-      const summaryResultText = await summarizeText({ textToSummarize });
+      const summaryResultText = await summarizeText({ 
+          textToSummarize, 
+          language: userProfile.preferredLanguage || 'English' 
+      });
       const summary = summaryResultText.summary;
 
       const finalUpdatedDocs = documents.map((d) =>
