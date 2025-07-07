@@ -6,15 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getInsurancePolicies } from '@/lib/firestore';
-import type { InsurancePolicy } from '@/lib/types';
+import type { InsurancePolicy, EndUserProfile } from '@/lib/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog";
 import { Eye, CheckCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { translations } from '@/lib/translations';
 
 export default function UserInsurancePage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [policies, setPolicies] = useState<InsurancePolicy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [documentToPreview, setDocumentToPreview] = useState<InsurancePolicy | null>(null);
+
+  const preferredLanguage = (user?.profile as EndUserProfile)?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage]?.insurance || translations.English.insurance;
 
   useEffect(() => {
     const fetchPolicies = async () => {
@@ -53,7 +59,7 @@ export default function UserInsurancePage() {
 
   return (
     <>
-      <PageTitle title="Explore Insurance" description="Browse available health insurance plans and express your interest." />
+      <PageTitle title={t.title} description={t.description} />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {policies.map((policy) => (
@@ -66,21 +72,21 @@ export default function UserInsurancePage() {
               <p className="text-2xl font-bold text-primary">
                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(policy.insuredAmount)}
               </p>
-              <p className="text-sm text-muted-foreground">Insured Amount</p>
+              <p className="text-sm text-muted-foreground">{t.insuredAmount}</p>
             </CardContent>
             <CardFooter className="gap-2">
               <Button variant="outline" className="w-full" onClick={() => handleViewDocument(policy)}>
-                <Eye className="mr-2 h-4 w-4" /> View Policy
+                <Eye className="mr-2 h-4 w-4" /> {t.viewPolicyButton}
               </Button>
               <Button className="w-full" onClick={() => handleInterested(policy)}>
-                <CheckCircle className="mr-2 h-4 w-4" /> I'm Interested
+                <CheckCircle className="mr-2 h-4 w-4" /> {t.interestedButton}
               </Button>
             </CardFooter>
           </Card>
         ))}
         {policies.length === 0 && (
             <p className="text-center text-muted-foreground py-4 col-span-full">
-                No insurance policies are available at the moment.
+                {t.noPolicies}
             </p>
         )}
       </div>
@@ -90,7 +96,7 @@ export default function UserInsurancePage() {
           <DialogHeader>
             <DialogTitle>{documentToPreview?.policyDocument.name}</DialogTitle>
             <DialogDescription>
-              Policy Document for {documentToPreview?.companyName} - {documentToPreview?.policyType}
+              {t.dialogTitle} {documentToPreview?.companyName} - {documentToPreview?.policyType}
             </DialogDescription>
           </DialogHeader>
           <div className="h-full py-4">
@@ -99,7 +105,7 @@ export default function UserInsurancePage() {
              )}
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+            <DialogClose asChild><Button variant="outline">{t.closeButton}</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

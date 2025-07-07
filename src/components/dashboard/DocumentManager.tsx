@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { translations } from '@/lib/translations';
 
 export function DocumentManager() {
   const { user, addDocument, updateUserProfile } = useAuth(); // Use the new addDocument function
@@ -36,6 +37,8 @@ export function DocumentManager() {
     return <p>Document management is only available for End Users.</p>;
   }
   const userProfile = user.profile as EndUserProfile;
+  const preferredLanguage = userProfile?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage]?.docManager || translations.English.docManager;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -180,26 +183,26 @@ export function DocumentManager() {
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Upload New Document</CardTitle>
-          <CardDescription>Select a file to upload. It will be categorized automatically by AI.</CardDescription>
+          <CardTitle>{t.uploadTitle}</CardTitle>
+          <CardDescription>{t.uploadDescription}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-4">
           <Input id="file-upload" type="file" onChange={handleFileChange} className="flex-grow" aria-label="Choose file"/>
           <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="w-full sm:w-auto">
             {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-            Upload and Categorize
+            {t.uploadButton}
           </Button>
         </CardContent>
       </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>My Documents</CardTitle>
-          <CardDescription>View and manage your uploaded documents by category.</CardDescription>
+          <CardTitle>{t.myDocsTitle}</CardTitle>
+          <CardDescription>{t.myDocsDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No documents uploaded yet.</p>
+            <p className="text-muted-foreground text-center py-4">{t.noDocs}</p>
           ) : (
             <Accordion type="multiple" className="w-full" defaultValue={documentCategories.filter(cat => groupedDocuments[cat]?.length > 0)}>
               {documentCategories.map(category => (
@@ -221,35 +224,35 @@ export function DocumentManager() {
                               <span className="truncate font-medium" title={doc.name}>{doc.name}</span>
                             </div>
                             <div className="flex gap-1.5 flex-shrink-0">
-                               <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
+                               <Button variant="outline" size="icon" title={t.viewButton} onClick={() => setDocumentToPreview(doc)}>
                                  <Eye className="h-4 w-4" />
                                </Button>
-                              <Button variant="outline" size="icon" title="Scan and Summarize" onClick={() => handleScanAndSummarize(doc)}>
+                              <Button variant="outline" size="icon" title={t.summarizeButton} onClick={() => handleScanAndSummarize(doc)}>
                                 <FileJson2 className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="icon" title="Rename Document" onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
+                              <Button variant="outline" size="icon" title={t.renameButton} onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
                                 <Edit2 className="h-4 w-4" />
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="icon" title="Delete Document">
+                                  <Button variant="destructive" size="icon" title={t.deleteButton}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogTitle>{t.deleteDialogTitle}</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the document "{doc.name}".
+                                      {t.deleteDialogDescription} "{doc.name}".
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteDocument(doc.id)}>Delete</AlertDialogAction>
+                                    <AlertDialogCancel>{t.cancelButton}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteDocument(doc.id)}>{t.deleteConfirmButton}</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
-                              <Button variant="outline" size="icon" title="Download Document" asChild>
+                              <Button variant="outline" size="icon" title={t.downloadButton} asChild>
                                 <a href={doc.dataUri} download={doc.name} target="_blank" rel="noopener noreferrer">
                                   <Download className="h-4 w-4" />
                                 </a>
@@ -270,33 +273,33 @@ export function DocumentManager() {
       <Dialog open={!!viewingDocument} onOpenChange={(isOpen) => { if (!isOpen) { setViewingDocument(null); } }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI Summary: {viewingDocument?.name}</DialogTitle>
+            <DialogTitle>{t.summaryDialogTitle}: {viewingDocument?.name}</DialogTitle>
             <DialogDescription>
-              View an AI-generated summary of your document in simple terms.
+              {t.summaryDialogDescription}
             </DialogDescription>
           </DialogHeader>
           
           <div className="max-h-[60vh] overflow-y-auto p-1">
-            <h3 className="font-semibold mb-2 text-lg">AI Summary</h3>
+            <h3 className="font-semibold mb-2 text-lg">{t.summaryDialogHeader}</h3>
             <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
               {isSummarizing ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2">Generating Summary...</p>
+                  <p className="ml-2">{t.summaryDialogGenerating}</p>
                 </div>
               ) : viewingDocument?.summary ? (
                 <pre className="whitespace-pre-wrap text-sm">{viewingDocument.summary}</pre>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <p className="text-muted-foreground">No summary available for this document.</p>
-                  <p className="text-xs text-muted-foreground mt-2">Use the "Scan and Summarize" feature to generate one.</p>
+                  <p className="text-muted-foreground">{t.summaryDialogNoSummary}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{t.summaryDialogNoSummaryDesc}</p>
                 </div>
               )}
             </ScrollArea>
           </div>
 
           <DialogFooter className="mt-4">
-            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+            <DialogClose asChild><Button variant="outline">{t.closeButton}</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -304,18 +307,18 @@ export function DocumentManager() {
       <Dialog open={!!editingDocument} onOpenChange={(isOpen) => !isOpen && setEditingDocument(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Document</DialogTitle>
-            <DialogDescription>Enter a new name for "{editingDocument?.name}".</DialogDescription>
+            <DialogTitle>{t.renameDialogTitle}</DialogTitle>
+            <DialogDescription>{t.renameDialogDescription} "{editingDocument?.name}".</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="doc-name" className="text-right">New Name</Label>
+              <Label htmlFor="doc-name" className="text-right">{t.renameDialogLabel}</Label>
               <Input id="doc-name" value={newFileName} onChange={(e) => setNewFileName(e.target.value)} className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleRenameDocument}>Save changes</Button>
+            <DialogClose asChild><Button variant="outline">{t.cancelButton}</Button></DialogClose>
+            <Button onClick={handleRenameDocument}>{t.saveButton}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -325,7 +328,7 @@ export function DocumentManager() {
           <DialogHeader>
             <DialogTitle>{documentToPreview?.name}</DialogTitle>
             <DialogDescription>
-              Document Preview
+              {t.previewDialogTitle}
             </DialogDescription>
           </DialogHeader>
           <div className="h-full py-4">
@@ -334,7 +337,7 @@ export function DocumentManager() {
              )}
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+            <DialogClose asChild><Button variant="outline">{t.closeButton}</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

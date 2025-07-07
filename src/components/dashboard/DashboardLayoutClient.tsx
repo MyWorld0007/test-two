@@ -23,30 +23,32 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/common/AppLogo';
 import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella, Database, UserPlus, BellRing } from 'lucide-react';
-import type { UserRole } from '@/lib/types';
+import type { UserRole, EndUserProfile } from '@/lib/types';
+import { translations } from '@/lib/translations';
 
 interface NavItem {
   href: string;
-  label: string;
+  label: string; // Fallback
+  translationKey: keyof (typeof translations.English.sidebar);
   icon: React.ElementType;
   roles: UserRole[];
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['enduser', 'consultant', 'admin'] },
-  { href: '/dashboard/user/profile', label: 'My Profile', icon: User, roles: ['enduser'] },
-  { href: '/dashboard/user/documents', label: 'My Documents', icon: FileText, roles: ['enduser'] },
-  { href: '/dashboard/user/reminders', label: 'Reminders', icon: BellRing, roles: ['enduser'] },
-  { href: '/dashboard/user/access', label: 'Access Control', icon: KeyRound, roles: ['enduser'] },
-  { href: '/dashboard/user/insurance', label: 'Insurance', icon: Umbrella, roles: ['enduser'] },
-  { href: '/dashboard/consultant/profile', label: 'My Profile', icon: User, roles: ['consultant'] },
-  { href: '/dashboard/consultant/view-user', label: 'View User', icon: Search, roles: ['consultant'] },
-  { href: '/dashboard/admin/users', label: 'Manage Users', icon: Users, roles: ['admin'] },
-  { href: '/dashboard/admin/consultants', label: 'Manage Consultants', icon: Briefcase, roles: ['admin'] },
-  { href: '/dashboard/admin/create-consultant', label: 'Create Consultant', icon: UserPlus, roles: ['admin'] },
-  { href: '/dashboard/admin/access', label: 'Access Control', icon: ShieldAlert, roles: ['admin'] },
-  { href: '/dashboard/admin/insurance', label: 'Insurance', icon: Landmark, roles: ['admin'] },
-  { href: '/dashboard/admin/data-explorer', label: 'Data Explorer', icon: Database, roles: ['admin'] },
+  { href: '/dashboard', label: 'Dashboard', translationKey: 'dashboard', icon: LayoutDashboard, roles: ['enduser', 'consultant', 'admin'] },
+  { href: '/dashboard/user/profile', label: 'My Profile', translationKey: 'myProfile', icon: User, roles: ['enduser'] },
+  { href: '/dashboard/user/documents', label: 'My Documents', translationKey: 'myDocuments', icon: FileText, roles: ['enduser'] },
+  { href: '/dashboard/user/reminders', label: 'Reminders', translationKey: 'reminders', icon: BellRing, roles: ['enduser'] },
+  { href: '/dashboard/user/access', label: 'Access Control', translationKey: 'accessControl', icon: KeyRound, roles: ['enduser'] },
+  { href: '/dashboard/user/insurance', label: 'Insurance', translationKey: 'insurance', icon: Umbrella, roles: ['enduser'] },
+  { href: '/dashboard/consultant/profile', label: 'My Profile', translationKey: 'myProfile', icon: User, roles: ['consultant'] },
+  { href: '/dashboard/consultant/view-user', label: 'View User', translationKey: 'myProfile', icon: Search, roles: ['consultant'] }, // Placeholder translation
+  { href: '/dashboard/admin/users', label: 'Manage Users', translationKey: 'myProfile', icon: Users, roles: ['admin'] }, // Placeholder
+  { href: '/dashboard/admin/consultants', label: 'Manage Consultants', translationKey: 'myProfile', icon: Briefcase, roles: ['admin'] }, // Placeholder
+  { href: '/dashboard/admin/create-consultant', label: 'Create Consultant', translationKey: 'myProfile', icon: UserPlus, roles: ['admin'] }, // Placeholder
+  { href: '/dashboard/admin/access', label: 'Access Control', translationKey: 'accessControl', icon: ShieldAlert, roles: ['admin'] },
+  { href: '/dashboard/admin/insurance', label: 'Insurance', translationKey: 'insurance', icon: Landmark, roles: ['admin'] },
+  { href: '/dashboard/admin/data-explorer', label: 'Data Explorer', translationKey: 'myProfile', icon: Database, roles: ['admin'] }, // Placeholder
 ];
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
@@ -76,6 +78,9 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     return null; // Or a redirect component, though useEffect handles it
   }
   
+  const preferredLanguage = (user.profile as EndUserProfile)?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage] || translations.English;
+
   const getProfilePageUrl = () => {
     switch (user.role) {
       case 'enduser':
@@ -120,11 +125,11 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
-                    tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
+                    tooltip={{ children: t.sidebar[item.translationKey] || item.label, className: "bg-primary text-primary-foreground" }}
                   >
                     <span>
                       <item.icon />
-                      <span>{item.label}</span>
+                      <span>{t.sidebar[item.translationKey] || item.label}</span>
                     </span>
                   </SidebarMenuButton>
                 </Link>
@@ -168,19 +173,19 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
               <Link href={profilePageUrl} passHref>
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <span>{t.userMenu.settings}</span>
                 </DropdownMenuItem>
               </Link>
               <Link href={profilePageUrl} passHref>
                 <DropdownMenuItem>
                   <ShieldCheck className="mr-2 h-4 w-4" />
-                  <span>Privacy</span>
+                  <span>{t.userMenu.privacy}</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>{t.userMenu.logout}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

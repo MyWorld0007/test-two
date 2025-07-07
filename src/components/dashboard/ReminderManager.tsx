@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2 } from 'lucide-react';
+import { translations } from '@/lib/translations';
 
 const reminderSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -42,6 +43,8 @@ export function ReminderManager() {
 
   const userProfile = user.profile as EndUserProfile;
   const reminders = userProfile.reminders || [];
+  const preferredLanguage = userProfile?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage]?.reminders || translations.English.reminders;
 
   const onSubmit = async (data: ReminderFormValues) => {
     setIsSubmitting(true);
@@ -83,13 +86,13 @@ export function ReminderManager() {
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center"><BellRing className="mr-2 h-5 w-5" />Set a Reminder</CardTitle>
-        <CardDescription>Add reminders for appointments, medication, or anything else.</CardDescription>
+        <CardTitle className="flex items-center"><BellRing className="mr-2 h-5 w-5" />{t.cardTitle}</CardTitle>
+        <CardDescription>{t.cardDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
-            <h3 className="font-semibold mb-4">Upcoming Reminders</h3>
+            <h3 className="font-semibold mb-4">{t.upcomingReminders}</h3>
             <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
               {reminders.length > 0 ? (
                 reminders
@@ -106,12 +109,12 @@ export function ReminderManager() {
                     </div>
                   ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">You have no upcoming reminders.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t.noReminders}</p>
               )}
             </div>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">New Reminder</h3>
+            <h3 className="font-semibold mb-4">{t.newReminder}</h3>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -119,9 +122,9 @@ export function ReminderManager() {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>{t.formTitle}</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Doctor's Appointment" {...field} />
+                        <Input placeholder={t.formTitlePlaceholder} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -133,7 +136,7 @@ export function ReminderManager() {
                     name="date"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Date</FormLabel>
+                        <FormLabel>{t.formDate}</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -147,7 +150,7 @@ export function ReminderManager() {
                                 {field.value ? (
                                     format(field.value, "PPP")
                                 ) : (
-                                    <span>Pick a date</span>
+                                    <span>{t.formDatePlaceholder}</span>
                                 )}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
@@ -172,7 +175,7 @@ export function ReminderManager() {
                         name="time"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Time (24h)</FormLabel>
+                                <FormLabel>{t.formTime}</FormLabel>
                                 <FormControl>
                                     <Input type="time" {...field} />
                                 </FormControl>
@@ -183,7 +186,7 @@ export function ReminderManager() {
                 </div>
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                  Add Reminder
+                  {t.addButton}
                 </Button>
               </form>
             </Form>

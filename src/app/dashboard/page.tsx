@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
 import { getEndUsersCount, getConsultantsCount, getNewEndUsersCount, getNewConsultantsCount } from '@/lib/firestore';
+import { translations } from '@/lib/translations';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -57,11 +58,16 @@ export default function DashboardPage() {
       </div>
     );
   }
+  
+  const endUserProfile = user.role === 'enduser' ? user.profile as EndUserProfile : null;
+  const preferredLanguage = endUserProfile?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage] || translations.English;
+
 
   const getWelcomeMessage = () => {
     switch (user.role) {
       case 'enduser':
-        return `Welcome, ${(user.profile as EndUserProfile).firstName}! Manage your profile and documents here.`;
+        return `${t.dashboard.welcome}, ${(user.profile as EndUserProfile).firstName}! ${t.dashboard.welcomeMsg}`;
       case 'consultant':
         return `Welcome, ${(user.profile as any).firstName}! Access your tools and view user profiles.`;
       case 'admin':
@@ -71,7 +77,6 @@ export default function DashboardPage() {
     }
   };
 
-  const endUserProfile = user.role === 'enduser' ? user.profile as EndUserProfile : null;
   const consultantProfile = user.role === 'consultant' ? user.profile as ConsultantProfile : null;
 
   return (
@@ -220,11 +225,11 @@ export default function DashboardPage() {
             <CardTitle className="text-xl">
               <div className="flex items-center">
                 <MessageSquare className="mr-2 h-5 w-5 text-primary" />
-                Session History & Notes
+                {t.dashboard.sessionsTitle}
               </div>
             </CardTitle>
             <CardDescription>
-              Recent comments and notes from your consultations.
+              {t.dashboard.sessionsDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -245,7 +250,7 @@ export default function DashboardPage() {
                 </div>
               </ScrollArea>
             ) : (
-              <p className="text-center text-muted-foreground py-4">No session history or consultant notes found.</p>
+              <p className="text-center text-muted-foreground py-4">{t.dashboard.noSessions}</p>
             )}
           </CardContent>
         </Card>

@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Check, X, ShieldCheck, UserCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
+import { translations } from '@/lib/translations';
 
 export function AccessManager() {
   const { user, updateUserProfile } = useAuth();
@@ -19,6 +20,9 @@ export function AccessManager() {
   }
 
   const userProfile = user.profile as EndUserProfile;
+  const preferredLanguage = userProfile?.preferredLanguage as keyof typeof translations || 'English';
+  const t = translations[preferredLanguage]?.accessManager || translations.English.accessManager;
+
 
   const handleRequestUpdate = async (requestId: string, newStatus: AccessRequestStatus) => {
     const updatedRequests = userProfile.accessRequests.map(req =>
@@ -40,28 +44,28 @@ export function AccessManager() {
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="pending">
             <ShieldCheck className="mr-2 h-4 w-4" />
-            Pending Requests 
+            {t.pendingTab}
             {pendingRequests.length > 0 && <Badge className="ml-2">{pendingRequests.length}</Badge>}
         </TabsTrigger>
         <TabsTrigger value="history">
             <UserCheck className="mr-2 h-4 w-4" />
-            Access History
+            {t.historyTab}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="pending">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Pending Access Requests</CardTitle>
-            <CardDescription>Consultants who have requested to view your profile and documents.</CardDescription>
+            <CardTitle>{t.pendingCardTitle}</CardTitle>
+            <CardDescription>{t.pendingCardDescription}</CardDescription>
           </CardHeader>
           <CardContent>
             {pendingRequests.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Consultant</TableHead>
-                    <TableHead>Requested On</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>{t.pendingTableConsultant}</TableHead>
+                    <TableHead>{t.pendingTableDate}</TableHead>
+                    <TableHead className="text-right">{t.pendingTableAction}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -71,10 +75,10 @@ export function AccessManager() {
                       <TableCell>{format(new Date(req.requestedAt), 'PPP')}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button size="sm" variant="outline" onClick={() => handleRequestUpdate(req.requestId, 'approved')}>
-                          <Check className="mr-2 h-4 w-4" /> Approve
+                          <Check className="mr-2 h-4 w-4" /> {t.approveButton}
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => handleRequestUpdate(req.requestId, 'declined')}>
-                          <X className="mr-2 h-4 w-4" /> Decline
+                          <X className="mr-2 h-4 w-4" /> {t.declineButton}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -82,7 +86,7 @@ export function AccessManager() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center text-muted-foreground py-4">No pending requests.</p>
+              <p className="text-center text-muted-foreground py-4">{t.noPending}</p>
             )}
           </CardContent>
         </Card>
@@ -90,17 +94,17 @@ export function AccessManager() {
       <TabsContent value="history">
          <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Access History</CardTitle>
-            <CardDescription>A log of all access requests and their statuses.</CardDescription>
+            <CardTitle>{t.historyCardTitle}</CardTitle>
+            <CardDescription>{t.historyCardDescription}</CardDescription>
           </CardHeader>
           <CardContent>
             {processedRequests.length > 0 ? (
                <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Consultant</TableHead>
-                    <TableHead>Requested On</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
+                    <TableHead>{t.historyTableConsultant}</TableHead>
+                    <TableHead>{t.historyTableDate}</TableHead>
+                    <TableHead className="text-right">{t.historyTableStatus}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -110,7 +114,7 @@ export function AccessManager() {
                       <TableCell>{format(new Date(req.requestedAt), 'PPP')}</TableCell>
                       <TableCell className="text-right">
                          <Badge variant={req.status === 'approved' ? 'default' : 'destructive'}>
-                          {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                          {req.status === 'approved' ? t.statusApproved : t.statusDeclined}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -118,7 +122,7 @@ export function AccessManager() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center text-muted-foreground py-4">No access history found.</p>
+              <p className="text-center text-muted-foreground py-4">{t.noHistory}</p>
             )}
           </CardContent>
         </Card>
