@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, CalendarIcon } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
@@ -25,9 +25,11 @@ import { cn } from '@/lib/utils';
 const MAX_REJECTIONS = 3;
 
 const prescriptionSchema = z.object({
-  title: z.string().min(1, 'Reminder title is required.'),
   date: z.date({ required_error: 'A date is required.' }),
-  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
+  reminders: z.array(z.object({
+    title: z.string().min(1, 'Title is required.'),
+    time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
+  })).min(1, 'You must add at least one reminder.'),
 });
 
 type PrescriptionFormValues = z.infer<typeof prescriptionSchema>;
@@ -49,10 +51,15 @@ export function UserSearchAndDisplay() {
   const prescriptionForm = useForm<PrescriptionFormValues>({
     resolver: zodResolver(prescriptionSchema),
     defaultValues: {
-      title: '',
-      time: '09:00',
+      reminders: [{ title: '', time: '09:00' }],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: prescriptionForm.control,
+    name: "reminders"
+  });
+
 
   useEffect(() => {
     if (foundUser && consultantUser) {
@@ -174,27 +181,32 @@ export function UserSearchAndDisplay() {
     if (!foundUser) return;
     setIsPrescribing(true);
 
-    const { date, time, title } = data;
-    const [hours, minutes] = time.split(':').map(Number);
+    const { date, reminders } = data;
     
-    const combinedDateTime = new Date(date);
-    combinedDateTime.setHours(hours, minutes, 0, 0);
-
-    const newReminder: Reminder = {
-      id: `rem_${Date.now()}`,
-      title,
-      dateTime: combinedDateTime.toISOString(),
-    };
+    const newReminders: Reminder[] = reminders.map((reminderItem, index) => {
+        const [hours, minutes] = reminderItem.time.split(':').map(Number);
+        const combinedDateTime = new Date(date);
+        combinedDateTime.setHours(hours, minutes, 0, 0);
+        
+        return {
+            id: `rem_${Date.now()}_${index}`,
+            title: reminderItem.title,
+            dateTime: combinedDateTime.toISOString(),
+        };
+    });
     
-    const updatedReminders = [...(foundUser.reminders || []), newReminder];
+    const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
 
     try {
         await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
         setFoundUser(prevUser => prevUser ? { ...prevUser, reminders: updatedReminders } : null);
-        toast({ title: 'Reminder Sent!', description: `A reminder for "${title}" has been sent to the user.` });
-        prescriptionForm.reset({ title: '', time: '09:00', date: undefined });
+        toast({ title: 'Reminders Sent!', description: `${newReminders.length} reminder(s) have been sent to the user.` });
+        prescriptionForm.reset({ 
+          date: undefined,
+          reminders: [{ title: '', time: '09:00' }] 
+        });
     } catch (error) {
-        toast({ title: 'Error', description: 'Could not send reminder.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Could not send reminders.', variant: 'destructive' });
     } finally {
         setIsPrescribing(false);
     }
@@ -366,84 +378,113 @@ export function UserSearchAndDisplay() {
 
         <Card className="shadow-xl animate-in fade-in-50 duration-500">
             <CardHeader>
-                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescribe & Set Reminder</CardTitle>
-                <CardDescription>Prescribe medication and set a reminder for the end user. This will appear in their Reminders list.</CardDescription>
+                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescribe & Set Reminders</CardTitle>
+                <CardDescription>Prescribe medication and set reminders for the end user. This will appear in their Reminders list.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...prescriptionForm}>
-                  <form onSubmit={prescriptionForm.handleSubmit(handleSendReminder)} className="space-y-4">
+                  <form onSubmit={prescriptionForm.handleSubmit(handleSendReminder)} className="space-y-6">
                     <FormField
                       control={prescriptionForm.control}
-                      name="title"
+                      name="date"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Reminder Title (Medicine, Dosage)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Paracetamol 500mg - 1 tablet" {...field} />
-                          </FormControl>
+                          <FormItem className="flex flex-col">
+                          <FormLabel>Date for Reminders</FormLabel>
+                          <Popover>
+                              <PopoverTrigger asChild>
+                              <FormControl>
+                                  <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                      "w-full justify-start pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                  )}
+                                  >
+                                  {field.value ? (
+                                      format(field.value, "PPP")
+                                  ) : (
+                                      <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                              </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                  initialFocus
+                              />
+                              </PopoverContent>
+                          </Popover>
                           <FormMessage />
-                        </FormItem>
+                          </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                        control={prescriptionForm.control}
-                        name="date"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Date for First Reminder</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                    >
-                                    {field.value ? (
-                                        format(field.value, "PPP")
-                                    ) : (
-                                        <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                            control={prescriptionForm.control}
-                            name="time"
-                            render={({ field }) => (
+
+                    <div className="space-y-4">
+                      <FormLabel>Medications &amp; Timings</FormLabel>
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-end gap-2 p-3 border rounded-md">
+                          <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField
+                              control={prescriptionForm.control}
+                              name={`reminders.${index}.title`}
+                              render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Time (24h format)</FormLabel>
-                                    <FormControl>
-                                        <Input type="time" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
+                                  <FormLabel className="text-xs">Title (Medicine, Dosage)</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Paracetamol 500mg" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
                                 </FormItem>
-                            )}
-                        />
+                              )}
+                            />
+                            <FormField
+                              control={prescriptionForm.control}
+                              name={`reminders.${index}.time`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Time (24h format)</FormLabel>
+                                  <FormControl>
+                                    <Input type="time" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => remove(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                       <FormMessage>
+                        {prescriptionForm.formState.errors.reminders?.root?.message}
+                      </FormMessage>
                     </div>
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isPrescribing}>
-                        {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Send Reminder
-                      </Button>
+
+                    <div className="flex justify-between items-center pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => append({ title: '', time: '09:00' })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Reminder
+                        </Button>
+                        <Button type="submit" disabled={isPrescribing}>
+                            {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                            Send Reminders
+                        </Button>
                     </div>
                   </form>
                 </Form>
