@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/user/access', label: 'Access Control', translationKey: 'accessControl', icon: KeyRound, roles: ['enduser'] },
   { href: '/dashboard/user/insurance', label: 'Insurance', translationKey: 'insurance', icon: Umbrella, roles: ['enduser'] },
   { href: '/dashboard/consultant/profile', label: 'My Profile', translationKey: 'myProfile', icon: User, roles: ['consultant'] },
-  { href: '/dashboard/consultant/view-user', label: 'View User', translationKey: 'myProfile', icon: Search, roles: ['consultant'] }, // Placeholder translation
+  { href: '/dashboard/consultant/view-user', label: 'View User', translationKey: 'viewUser', icon: Search, roles: ['consultant'] },
   { href: '/dashboard/admin/users', label: 'Manage Users', translationKey: 'myProfile', icon: Users, roles: ['admin'] }, // Placeholder
   { href: '/dashboard/admin/consultants', label: 'Manage Consultants', translationKey: 'myProfile', icon: Briefcase, roles: ['admin'] }, // Placeholder
   { href: '/dashboard/admin/create-consultant', label: 'Create Consultant', translationKey: 'myProfile', icon: UserPlus, roles: ['admin'] }, // Placeholder

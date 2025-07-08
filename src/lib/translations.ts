@@ -11,6 +11,7 @@ export const translations = {
       reminders: "Reminders",
       accessControl: "Access Control",
       insurance: "Insurance",
+      viewUser: "View User",
     },
     userMenu: {
       settings: "Settings",
@@ -134,6 +135,7 @@ export const translations = {
       reminders: "रिमाइंडर",
       accessControl: "एक्सेस कंट्रोल",
       insurance: "बीमा",
+      viewUser: "उपयोगकर्ता देखें",
     },
     userMenu: {
       settings: "सेटिंग्स",
@@ -257,6 +259,7 @@ export const translations = {
       reminders: "অনুস্মারক",
       accessControl: "অ্যাক্সেস কন্ট্রোল",
       insurance: "বীমা",
+      viewUser: "ব্যবহারকারী দেখুন",
     },
     userMenu: {
       settings: "সেটিংস",
@@ -380,6 +383,7 @@ export const translations = {
       reminders: "स्मरणपत्रे",
       accessControl: "प्रवेश नियंत्रण",
       insurance: "विमा",
+      viewUser: "वापरकर्ता पहा",
     },
     userMenu: {
       settings: "सेटिंग्ज",
@@ -503,6 +507,7 @@ export const translations = {
       reminders: "రిమైండర్లు",
       accessControl: "ప్రాప్యత నియంత్రణ",
       insurance: "భీమా",
+      viewUser: "பயனரைப் பார்க்கவும்",
     },
     userMenu: {
       settings: "సెట్టింగులు",
@@ -626,6 +631,7 @@ export const translations = {
       reminders: "రిమైండర్‌లు",
       accessControl: "యాక్సెస్ కంట్రోల్",
       insurance: "భీమా",
+      viewUser: "వినియోగదారుని వీక్షించండి",
     },
     userMenu: {
       settings: "సెట్టింగ్‌లు",
@@ -749,6 +755,7 @@ export const translations = {
       reminders: "રીમાઇન્ડર્સ",
       accessControl: "એક્સેસ કંટ્રોલ",
       insurance: "વીમો",
+      viewUser: "વપરાશકર્તા જુઓ",
     },
     userMenu: {
       settings: "સેટિંગ્સ",
@@ -872,6 +879,7 @@ export const translations = {
       reminders: "ಜ್ಞಾಪನೆಗಳು",
       accessControl: "ಪ್ರವೇಶ ನಿಯಂತ್ರಣ",
       insurance: "ವಿಮೆ",
+      viewUser: "ಬಳಕೆದಾರರನ್ನು ವೀಕ್ಷಿಸಿ",
     },
     userMenu: {
       settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
@@ -995,6 +1003,7 @@ export const translations = {
       reminders: "ഓർമ്മപ്പെടുത്തലുകൾ",
       accessControl: "പ്രവേശന നിയന്ത്രണം",
       insurance: "ഇൻഷുറൻസ്",
+      viewUser: "ഉപയോക്താവിനെ കാണുക",
     },
     userMenu: {
       settings: "ക്രമീകരണങ്ങൾ",
@@ -1118,6 +1127,7 @@ export const translations = {
       reminders: "ਰੀਮਾਈਂਡਰ",
       accessControl: "ਪਹੁੰਚ ਨਿਯੰਤਰਣ",
       insurance: "ਬੀਮਾ",
+      viewUser: "ਉਪਭੋਗਤਾ ਵੇਖੋ",
     },
     userMenu: {
       settings: "ਸੈਟਿੰਗਾਂ",
