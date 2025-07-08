@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -25,11 +26,19 @@ import { cn } from '@/lib/utils';
 const MAX_REJECTIONS = 3;
 
 const prescriptionSchema = z.object({
-  date: z.date({ required_error: 'A date is required.' }),
+  dateRange: z.object({
+      from: z.date(),
+      to: z.date().optional(),
+    })
+    .optional()
+    .refine((date) => !!date?.from, { message: "A date or date range is required." }),
   reminders: z.array(z.object({
     title: z.string().min(1, 'Title is required.'),
     time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
   })).min(1, 'You must add at least one reminder.'),
+}).refine((data) => data.dateRange?.from, {
+  message: "A date or date range is required.",
+  path: ["dateRange"], 
 });
 
 type PrescriptionFormValues = z.infer<typeof prescriptionSchema>;
@@ -51,6 +60,7 @@ export function UserSearchAndDisplay() {
   const prescriptionForm = useForm<PrescriptionFormValues>({
     resolver: zodResolver(prescriptionSchema),
     defaultValues: {
+      dateRange: undefined,
       reminders: [{ title: '', time: '09:00' }],
     },
   });
@@ -178,31 +188,42 @@ export function UserSearchAndDisplay() {
   };
   
   const handleSendReminder = async (data: PrescriptionFormValues) => {
-    if (!foundUser) return;
+    if (!foundUser || !data.dateRange?.from) return;
     setIsPrescribing(true);
 
-    const { date, reminders } = data;
+    const { dateRange, reminders } = data;
+    const startDate = dateRange.from;
+    const endDate = dateRange.to || startDate;
+
+    const allNewReminders: Reminder[] = [];
     
-    const newReminders: Reminder[] = reminders.map((reminderItem, index) => {
-        const [hours, minutes] = reminderItem.time.split(':').map(Number);
-        const combinedDateTime = new Date(date);
-        combinedDateTime.setHours(hours, minutes, 0, 0);
-        
-        return {
-            id: `rem_${Date.now()}_${index}`,
-            title: reminderItem.title,
-            dateTime: combinedDateTime.toISOString(),
-        };
-    });
+    let currentDate = new Date(startDate);
+    currentDate.setHours(0,0,0,0);
+
+    while (currentDate <= endDate) {
+        reminders.forEach((reminderItem, index) => {
+            const [hours, minutes] = reminderItem.time.split(':').map(Number);
+            
+            const combinedDateTime = new Date(currentDate);
+            combinedDateTime.setHours(hours, minutes, 0, 0);
+            
+            allNewReminders.push({
+                id: `rem_${combinedDateTime.getTime()}_${index}`,
+                title: reminderItem.title,
+                dateTime: combinedDateTime.toISOString(),
+            });
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
     
-    const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
+    const updatedReminders = [...(foundUser.reminders || []), ...allNewReminders];
 
     try {
         await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
         setFoundUser(prevUser => prevUser ? { ...prevUser, reminders: updatedReminders } : null);
-        toast({ title: 'Reminders Sent!', description: `${newReminders.length} reminder(s) have been sent to the user.` });
+        toast({ title: 'Reminders Sent!', description: `${allNewReminders.length} reminder(s) have been sent to the user over the selected date range.` });
         prescriptionForm.reset({ 
-          date: undefined,
+          dateRange: undefined,
           reminders: [{ title: '', time: '09:00' }] 
         });
     } catch (error) {
@@ -386,7 +407,7 @@ export function UserSearchAndDisplay() {
                   <form onSubmit={prescriptionForm.handleSubmit(handleSendReminder)} className="space-y-6">
                     <FormField
                       control={prescriptionForm.control}
-                      name="date"
+                      name="dateRange"
                       render={({ field }) => (
                           <FormItem className="flex flex-col">
                           <FormLabel>Date for Reminders</FormLabel>
@@ -397,21 +418,28 @@ export function UserSearchAndDisplay() {
                                   variant={"outline"}
                                   className={cn(
                                       "w-full justify-start pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
+                                      !field.value?.from && "text-muted-foreground"
                                   )}
                                   >
-                                  {field.value ? (
-                                      format(field.value, "PPP")
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                   {field.value?.from ? (
+                                    field.value.to ? (
+                                      <>
+                                        {format(field.value.from, "LLL dd, y")} -{" "}
+                                        {format(field.value.to, "LLL dd, y")}
+                                      </>
+                                    ) : (
+                                      format(field.value.from, "LLL dd, y")
+                                    )
                                   ) : (
-                                      <span>Pick a date</span>
+                                    <span>Pick a date range</span>
                                   )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                   </Button>
                               </FormControl>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
                               <Calendar
-                                  mode="single"
+                                  mode="range"
                                   selected={field.value}
                                   onSelect={field.onChange}
                                   disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
