@@ -51,9 +51,12 @@ export default function AdminAccessManagerPage() {
     if (userProfile) {
         const updatedRequests = userProfile.accessRequests.map(req => {
              if (req.requestId === requestId) {
-                const newReq = { ...req, status: newStatus };
+                const newReq: AccessRequest = { ...req, status: newStatus };
                 if (newStatus === 'declined' && req.status !== 'declined') {
                     newReq.rejectionCount = (newReq.rejectionCount || 0) + 1;
+                }
+                if (newStatus === 'approved') {
+                    newReq.approvedAt = new Date().toISOString();
                 }
                 return newReq;
             }
@@ -85,7 +88,12 @@ export default function AdminAccessManagerPage() {
         const existingRequestIndex = updatedRequests.findIndex(r => r.consultantId === consultantId);
 
         if (existingRequestIndex > -1) {
-            updatedRequests[existingRequestIndex].status = 'approved';
+            const existingRequest = updatedRequests[existingRequestIndex];
+            updatedRequests[existingRequestIndex] = {
+                ...existingRequest,
+                status: 'approved',
+                approvedAt: new Date().toISOString(),
+            };
         } else {
             const newRequest: AccessRequest = {
                 requestId: `req_${Date.now()}`,
@@ -93,6 +101,7 @@ export default function AdminAccessManagerPage() {
                 consultantName: `${consultantProfile.firstName} ${consultantProfile.lastName}`,
                 status: 'approved',
                 requestedAt: new Date().toISOString(),
+                approvedAt: new Date().toISOString(),
                 rejectionCount: 0,
             };
             updatedRequests.push(newRequest);

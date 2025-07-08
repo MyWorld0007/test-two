@@ -25,9 +25,17 @@ export function AccessManager() {
 
 
   const handleRequestUpdate = async (requestId: string, newStatus: AccessRequestStatus) => {
-    const updatedRequests = userProfile.accessRequests.map(req =>
-      req.requestId === requestId ? { ...req, status: newStatus } : req
-    );
+    const updatedRequests = userProfile.accessRequests.map(req => {
+      if (req.requestId === requestId) {
+        const updatedReq: AccessRequest = { ...req, status: newStatus };
+        if (newStatus === 'approved') {
+          updatedReq.approvedAt = new Date().toISOString();
+        }
+        return updatedReq;
+      }
+      return req;
+    });
+
     // Update the profile with the new requests array
     await updateUserProfile({ ...userProfile, accessRequests: updatedRequests });
     toast({

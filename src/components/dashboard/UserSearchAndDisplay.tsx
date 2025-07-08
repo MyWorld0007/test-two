@@ -1,21 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
-import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, AccessRequestStatus } from '@/lib/types';
+import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 const MAX_REJECTIONS = 3;
+
+const prescriptionSchema = z.object({
+  title: z.string().min(1, 'Reminder title is required.'),
+  date: z.date({ required_error: 'A date is required.' }),
+  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
+});
+
+type PrescriptionFormValues = z.infer<typeof prescriptionSchema>;
 
 export function UserSearchAndDisplay() {
   const { user: consultantUser, updateUserProfile: updateConsultantProfile } = useAuth();
@@ -25,28 +40,46 @@ export function UserSearchAndDisplay() {
   const [comment, setComment] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
-  const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
+  const [isPrescribing, setIsPrescribing] = useState(false);
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
-  useEffect(() => {
-    if (accessRequest?.status === 'approved' && foundUser && consultantUser) {
-      const consultantProfile = consultantUser.profile as ConsultantProfile;
-      const existingEntry = consultantProfile.attendedUsers?.find(u => u.userId === foundUser.userId);
-      if (existingEntry) return; // Already recorded
+  const prescriptionForm = useForm<PrescriptionFormValues>({
+    resolver: zodResolver(prescriptionSchema),
+    defaultValues: {
+      title: '',
+      time: '09:00',
+    },
+  });
 
-      const newEntry = {
-        userId: foundUser.userId,
-        name: `${foundUser.firstName} ${foundUser.lastName}`,
-        lastViewed: new Date().toISOString(),
-      };
-      const updatedAttendedUsers = [...(consultantProfile.attendedUsers || []), newEntry];
-      updateConsultantProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
+  useEffect(() => {
+    if (foundUser && consultantUser) {
+      const request = foundUser.accessRequests?.find(r => r.consultantId === consultantUser.id);
+      if (request?.status === 'approved' && request.approvedAt) {
+          const approvedTime = new Date(request.approvedAt).getTime();
+          const now = new Date().getTime();
+          const oneHour = 60 * 60 * 1000;
+          if (now - approvedTime > oneHour) {
+              return; 
+          }
+
+          const existingEntry = consultantProfile.attendedUsers?.find(u => u.userId === foundUser.userId);
+          if (existingEntry) return;
+
+          const newEntry = {
+            userId: foundUser.userId,
+            name: `${foundUser.firstName} ${foundUser.lastName}`,
+            lastViewed: new Date().toISOString(),
+          };
+          const updatedAttendedUsers = [...(consultantProfile.attendedUsers || []), newEntry];
+          updateConsultantProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessRequest, foundUser]);
+  }, [foundUser, consultantUser]);
+
 
   const handleSearch = () => {
     if (!searchId.trim() || !consultantUser) {
@@ -55,15 +88,12 @@ export function UserSearchAndDisplay() {
     }
     setIsSearching(true);
     setFoundUser(null);
-    setAccessRequest(null);
 
     setTimeout(async () => {
       try {
         const user = await findUserByUniqueId(searchId.trim());
         if (user) {
             setFoundUser(user);
-            const request = user.accessRequests?.find(r => r.consultantId === consultantUser.id) || null;
-            setAccessRequest(request);
         } else {
             toast({ title: "Not Found", description: `No user found with Unique ID: ${searchId}.`, variant: "destructive" });
         }
@@ -90,6 +120,8 @@ export function UserSearchAndDisplay() {
       }
       currentRequest.status = 'pending';
       currentRequest.requestedAt = new Date().toISOString();
+      // Reset approvedAt when re-requesting
+      delete currentRequest.approvedAt;
     } else {
        currentRequest = {
         requestId: `req_${Date.now()}`,
@@ -104,7 +136,6 @@ export function UserSearchAndDisplay() {
     
     try {
         await updateUserProfileDocument(foundUser.userId, { accessRequests: updatedRequests });
-        setAccessRequest(currentRequest);
         setFoundUser(prev => prev ? {...prev, accessRequests: updatedRequests} : null);
         toast({ title: "Request Sent", description: "Your access request has been sent to the user." });
     } catch (error) {
@@ -138,6 +169,36 @@ export function UserSearchAndDisplay() {
     
     setIsCommenting(false);
   };
+  
+  const handleSendReminder = async (data: PrescriptionFormValues) => {
+    if (!foundUser) return;
+    setIsPrescribing(true);
+
+    const { date, time, title } = data;
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    const combinedDateTime = new Date(date);
+    combinedDateTime.setHours(hours, minutes, 0, 0);
+
+    const newReminder: Reminder = {
+      id: `rem_${Date.now()}`,
+      title,
+      dateTime: combinedDateTime.toISOString(),
+    };
+    
+    const updatedReminders = [...(foundUser.reminders || []), newReminder];
+
+    try {
+        await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
+        setFoundUser(prevUser => prevUser ? { ...prevUser, reminders: updatedReminders } : null);
+        toast({ title: 'Reminder Sent!', description: `A reminder for "${title}" has been sent to the user.` });
+        prescriptionForm.reset({ title: '', time: '09:00', date: undefined });
+    } catch (error) {
+        toast({ title: 'Error', description: 'Could not send reminder.', variant: 'destructive' });
+    } finally {
+        setIsPrescribing(false);
+    }
+  };
 
   if (consultantUser?.role !== 'consultant') {
     return <p>This feature is for consultants only.</p>
@@ -146,9 +207,32 @@ export function UserSearchAndDisplay() {
   const renderAccessContent = () => {
     if (!foundUser) return null;
 
-    const status = accessRequest?.status || 'none';
-    const rejectionCount = accessRequest?.rejectionCount || 0;
+    const request = foundUser.accessRequests?.find(r => r.consultantId === consultantUser.id) || null;
+    const status = request?.status || 'none';
+    const rejectionCount = request?.rejectionCount || 0;
 
+    if (status === 'approved' && request?.approvedAt) {
+      const approvedTime = new Date(request.approvedAt).getTime();
+      const now = new Date().getTime();
+      const oneHour = 60 * 60 * 1000;
+      if (now - approvedTime > oneHour) {
+        return (
+          <Card className="text-center">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-center"><Clock className="h-6 w-6 mr-2 text-destructive"/> Access Expired</CardTitle>
+              <CardDescription>Your one-hour access to this profile has expired. Please request access again.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleRequestAccess} disabled={isLoadingAccess} variant="secondary">
+                {isLoadingAccess ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                Re-request Access
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      }
+    }
+    
     switch (status) {
       case 'approved':
         return renderUserProfile();
@@ -207,6 +291,7 @@ export function UserSearchAndDisplay() {
   const renderUserProfile = () => {
     if (!foundUser) return null;
     return (
+      <div className="space-y-6">
        <Card className="shadow-xl animate-in fade-in-50 duration-500">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -278,6 +363,93 @@ export function UserSearchAndDisplay() {
             </div>
           </CardFooter>
         </Card>
+
+        <Card className="shadow-xl animate-in fade-in-50 duration-500">
+            <CardHeader>
+                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescribe & Set Reminder</CardTitle>
+                <CardDescription>Prescribe medication and set a reminder for the end user. This will appear in their Reminders list.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...prescriptionForm}>
+                  <form onSubmit={prescriptionForm.handleSubmit(handleSendReminder)} className="space-y-4">
+                    <FormField
+                      control={prescriptionForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reminder Title (Medicine, Dosage)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Paracetamol 500mg - 1 tablet" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={prescriptionForm.control}
+                        name="date"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Date for First Reminder</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP")
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                            control={prescriptionForm.control}
+                            name="time"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Time (24h format)</FormLabel>
+                                    <FormControl>
+                                        <Input type="time" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={isPrescribing}>
+                        {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Send Reminder
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+            </CardContent>
+        </Card>
+      </div>
     )
   }
 
