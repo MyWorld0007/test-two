@@ -11,11 +11,13 @@ import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { extractRemindersFromPrescription } from '@/ai/flows/extract-reminders-from-prescription';
+import { enhancePrescription } from '@/ai/flows/enhance-prescription-flow';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, Bot } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, Bot, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Separator } from '../ui/separator';
 
 const MAX_REJECTIONS = 3;
 
@@ -29,7 +31,8 @@ export function UserSearchAndDisplay() {
   const [isSearching, setIsSearching] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
-  const [isPrescribing, setIsPrescribing] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
@@ -150,27 +153,45 @@ export function UserSearchAndDisplay() {
     setIsCommenting(false);
   };
   
-  const handleAnalyzeAndRemind = async () => {
+  const handleEnhancePrescription = async () => {
     if (!prescriptionText.trim()) {
-      toast({ title: "Empty Prescription", description: "Please write a prescription before analyzing.", variant: "destructive" });
+      toast({ title: "Empty Prescription", description: "Please write a prescription before enhancing.", variant: "destructive" });
+      return;
+    }
+    setIsEnhancing(true);
+    try {
+      const result = await enhancePrescription({ prescriptionText });
+      setPrescriptionText(result.enhancedText);
+      toast({ title: "Prescription Enhanced", description: "The prescription has been clarified by AI." });
+    } catch (error) {
+      console.error("Enhancement Error:", error);
+      toast({ title: "Enhancement Failed", description: "Could not enhance the prescription.", variant: "destructive" });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const handleConfirmAndRemind = async () => {
+    if (!prescriptionText.trim()) {
+      toast({ title: "Empty Prescription", description: "Please write a prescription before confirming.", variant: "destructive" });
       return;
     }
     if (!foundUser) return;
 
-    setIsPrescribing(true);
+    setIsConfirming(true);
     toast({ title: "Processing Prescription...", description: "Please wait while the AI extracts reminders." });
 
     try {
-        const result = await extractRemindersFromPrescription({ prescriptionText: prescriptionText });
+        const result = await extractRemindersFromPrescription({ prescriptionText });
 
         if (!result.reminders || result.reminders.length === 0) {
           toast({ title: "No Reminders Found", description: "The AI could not find any specific reminders in the text.", variant: "destructive"});
-          setIsPrescribing(false);
+          setIsConfirming(false);
           return;
         }
         
         const newReminders: Reminder[] = result.reminders.map(r => ({
-          ...r, // Copy all fields from the AI result
+          ...r,
           id: `rem_${new Date(r.dateTime).getTime()}_${Math.random().toString(36).substr(2, 5)}`,
         }));
 
@@ -186,7 +207,7 @@ export function UserSearchAndDisplay() {
         console.error("Prescription Processing Error:", error);
         toast({ title: "Processing Failed", description: (error as Error).message || "Could not process the prescription.", variant: "destructive" });
     } finally {
-        setIsPrescribing(false);
+        setIsConfirming(false);
     }
   };
 
@@ -358,7 +379,7 @@ export function UserSearchAndDisplay() {
         <Card className="shadow-xl animate-in fade-in-50 duration-500">
             <CardHeader>
                 <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescription</CardTitle>
-                <CardDescription>Write the prescription below. The AI will extract medication and appointment details to automatically create reminders for the user.</CardDescription>
+                <CardDescription>Write the prescription, enhance it with AI for clarity, then confirm to set reminders for the user.</CardDescription>
             </CardHeader>
             <CardContent>
                <Textarea 
@@ -370,10 +391,15 @@ export function UserSearchAndDisplay() {
                 className="w-full"
               />
             </CardContent>
-            <CardFooter>
-                <Button onClick={handleAnalyzeAndRemind} disabled={isPrescribing} className="w-full">
-                  {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
-                  Analyze and Set Reminders
+            <CardFooter className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleEnhancePrescription} disabled={isEnhancing || !prescriptionText.trim()} className="w-full sm:w-auto" variant="outline">
+                  {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Enhance with AI
+                </Button>
+                <Separator orientation="vertical" className="h-6 hidden sm:block"/>
+                <Button onClick={handleConfirmAndRemind} disabled={isConfirming || !prescriptionText.trim()} className="w-full sm:flex-grow">
+                  {isConfirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                  Confirm & Set Reminders
                 </Button>
             </CardFooter>
         </Card>
