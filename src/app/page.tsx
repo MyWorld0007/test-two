@@ -40,7 +40,7 @@ const TestimonialCard = ({ quote, author, role }: { quote: string, author: strin
 
 export default function HomePage() {
   return (
-    <div className="w-full bg-background text-foreground overflow-x-hidden">
+    <div className="w-full bg-page-background text-foreground overflow-x-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border/30">
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
             <Link href="/" aria-label="Home">
@@ -99,7 +99,7 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-24 bg-muted/30 -mx-4 px-4">
+        <section id="features" className="py-24 bg-card -mx-4 px-4 border-y">
             <div className="container mx-auto">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold">Your Health, Reimagined</h2>
@@ -142,7 +142,7 @@ export default function HomePage() {
         </section>
         
         {/* Testimonials Section */}
-        <section id="testimonials" className="py-24 bg-muted/30 -mx-4 px-4">
+        <section id="testimonials" className="py-24 bg-card -mx-4 px-4 border-y">
             <div className="container mx-auto">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold">Loved by Patients & Doctors</h2>
@@ -171,7 +171,7 @@ export default function HomePage() {
 
       </main>
       
-      <footer className="border-t">
+      <footer className="border-t bg-card">
         <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-2">
             <AppLogo size="sm"/>
@@ -186,5 +186,4 @@ export default function HomePage() {
       </footer>
     </div>
   );
-
-    
+}
