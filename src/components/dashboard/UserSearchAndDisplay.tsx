@@ -170,9 +170,8 @@ export function UserSearchAndDisplay() {
         }
         
         const newReminders: Reminder[] = result.reminders.map(r => ({
+          ...r, // Copy all fields from the AI result
           id: `rem_${new Date(r.dateTime).getTime()}_${Math.random().toString(36).substr(2, 5)}`,
-          title: r.title,
-          dateTime: r.dateTime,
         }));
 
         const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
