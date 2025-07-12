@@ -76,15 +76,13 @@ const prompt = ai.definePrompt({
   - For relative dates like "tomorrow", calculate the date based on today.
   - For relative periods like "in 2 weeks", calculate the date from today.
 
-  First, use the 'documentTextExtractor' tool to get the text from the document. Then, analyze the text to create reminders.
+  First, use the 'documentTextExtractor' tool with the provided 'prescriptionDataUri' to get the text from the document. Then, analyze the extracted text to create reminders.
 
   - For medications: Identify the medication name, dosage, and frequency (e.g., 'twice a day', 'at 8 am and 8 pm', 'before breakfast'). Create a reminder for each specific time a medication should be taken. If a duration is mentioned (e.g., 'for 7 days'), create daily reminders for that period.
   - For appointments: Identify the date and time of any follow-up appointments mentioned.
 
   Create a precise reminder for each event with a full ISO 8601 formatted dateTime. The title should be clear and concise.
-
-  Prescription Document:
-  {{media url=prescriptionDataUri}}`,
+  `,
 });
 
 const extractRemindersFlow = ai.defineFlow(
