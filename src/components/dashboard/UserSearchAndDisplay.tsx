@@ -12,7 +12,7 @@ import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRe
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { extractRemindersFromPrescription } from '@/ai/flows/extract-reminders-from-prescription';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, UploadCloud } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, Bot } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
@@ -25,11 +25,11 @@ export function UserSearchAndDisplay() {
   const [searchId, setSearchId] = useState('');
   const [foundUser, setFoundUser] = useState<EndUserProfile | null>(null);
   const [comment, setComment] = useState('');
+  const [prescriptionText, setPrescriptionText] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isPrescribing, setIsPrescribing] = useState(false);
-  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
@@ -149,35 +149,22 @@ export function UserSearchAndDisplay() {
     
     setIsCommenting(false);
   };
-
-  const handlePrescriptionFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setPrescriptionFile(event.target.files[0]);
-    }
-  };
   
-  const handleUploadPrescriptionAndSetReminders = async () => {
-    if (!prescriptionFile) {
-      toast({ title: "No file selected", description: "Please select a prescription file to upload.", variant: "destructive" });
+  const handleAnalyzeAndRemind = async () => {
+    if (!prescriptionText.trim()) {
+      toast({ title: "Empty Prescription", description: "Please write a prescription before analyzing.", variant: "destructive" });
       return;
     }
     if (!foundUser) return;
 
     setIsPrescribing(true);
-    toast({ title: "Processing Prescription...", description: "Please wait while we extract reminders." });
+    toast({ title: "Processing Prescription...", description: "Please wait while the AI extracts reminders." });
 
     try {
-        const dataUri = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(prescriptionFile);
-        });
-
-        const result = await extractRemindersFromPrescription({ prescriptionDataUri: dataUri });
+        const result = await extractRemindersFromPrescription({ prescriptionText: prescriptionText });
 
         if (!result.reminders || result.reminders.length === 0) {
-          toast({ title: "No Reminders Found", description: "The AI could not find any specific reminders in the document.", variant: "destructive"});
+          toast({ title: "No Reminders Found", description: "The AI could not find any specific reminders in the text.", variant: "destructive"});
           setIsPrescribing(false);
           return;
         }
@@ -194,9 +181,7 @@ export function UserSearchAndDisplay() {
 
         toast({ title: "Reminders Set!", description: `Successfully set ${newReminders.length} reminder(s) for the user.` });
         
-        setPrescriptionFile(null); 
-        const fileInput = document.getElementById('prescription-upload') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
+        setPrescriptionText('');
 
     } catch (error) {
         console.error("Prescription Processing Error:", error);
@@ -373,25 +358,25 @@ export function UserSearchAndDisplay() {
 
         <Card className="shadow-xl animate-in fade-in-50 duration-500">
             <CardHeader>
-                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Upload Prescription</CardTitle>
-                <CardDescription>Upload a prescription document. The AI will extract medication and appointment details to automatically create reminders for the user.</CardDescription>
+                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescription</CardTitle>
+                <CardDescription>Write the prescription below. The AI will extract medication and appointment details to automatically create reminders for the user.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Input 
-                  id="prescription-upload" 
-                  type="file" 
-                  onChange={handlePrescriptionFileChange}
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
-                  className="flex-grow" 
-                  aria-label="Choose prescription file"
-                />
-                <Button onClick={handleUploadPrescriptionAndSetReminders} disabled={!prescriptionFile || isPrescribing} className="w-full sm:w-auto">
-                  {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                  Upload and Set Reminders
-                </Button>
-              </div>
+               <Textarea 
+                id="prescriptionText"
+                placeholder="e.g., Take Ibuprofen 200mg twice a day for 5 days. Follow-up with Dr. Smith in 2 weeks."
+                value={prescriptionText}
+                onChange={(e) => setPrescriptionText(e.target.value)}
+                rows={5}
+                className="w-full"
+              />
             </CardContent>
+            <CardFooter>
+                <Button onClick={handleAnalyzeAndRemind} disabled={isPrescribing} className="w-full">
+                  {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                  Analyze and Set Reminders
+                </Button>
+            </CardFooter>
         </Card>
       </div>
     )
