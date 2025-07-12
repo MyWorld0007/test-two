@@ -55,7 +55,8 @@ const documentTextExtractorTool = ai.defineTool({
       
       Medication:
       - Ibuprofen 200mg. Take 1 tablet twice a day for 5 days.
-      - Amoxicillin 500mg. Take 1 tablet every 8 hours for 7 days.
+      - Amoxicillin 500mg. Take 1 tablet with breakfast for 7 days.
+      - Metformin 500mg. Take 1 after dinner.
       
       Appointments:
       - Follow-up with Dr. Smith in 2 weeks.
@@ -72,13 +73,20 @@ const prompt = ai.definePrompt({
   output: {schema: ExtractRemindersOutputSchema},
   prompt: `You are an intelligent medical assistant. Your task is to analyze the provided prescription document and extract all medication schedules and follow-up appointments to create a list of reminders.
 
-  Today's date is ${new Date().toDateString()}. Any mention of "daily", "every day", or specific times should be anchored to today's date for the start.
+  Today's date is ${new Date().toDateString()}. Use this as the anchor for all date calculations.
+  
+  Follow these time interpretation rules precisely:
+  - If "breakfast" is mentioned, set the reminder time between 8:00 AM and 10:00 AM.
+  - If "lunch" is mentioned, set the reminder time between 12:00 PM and 2:00 PM.
+  - If "dinner" or "evening" is mentioned:
+    - For medication to be taken *before* dinner, set the time between 7:00 PM and 9:00 PM.
+    - For medication to be taken *after* dinner, set the time between 9:00 PM and 11:00 PM.
   - For relative dates like "tomorrow", calculate the date based on today.
   - For relative periods like "in 2 weeks", calculate the date from today.
 
   First, use the 'documentTextExtractor' tool with the provided 'prescriptionDataUri' to get the text from the document. Then, analyze the extracted text to create reminders.
 
-  - For medications: Identify the medication name, dosage, and frequency (e.g., 'twice a day', 'at 8 am and 8 pm', 'before breakfast'). Create a reminder for each specific time a medication should be taken. If a duration is mentioned (e.g., 'for 7 days'), create daily reminders for that period.
+  - For medications: Identify the medication name, dosage, and frequency. Create a reminder for each specific time a medication should be taken. If a duration is mentioned (e.g., 'for 7 days'), create daily reminders for that entire period.
   - For appointments: Identify the date and time of any follow-up appointments mentioned.
 
   Create a precise reminder for each event with a full ISO 8601 formatted dateTime. The title should be clear and concise.
@@ -94,9 +102,6 @@ const extractRemindersFlow = ai.defineFlow(
   async (input) => {
     const {output} = await prompt(input);
     
-    // In a real-world scenario, you might have more complex logic here to handle various date/time formats,
-    // but for this example, we rely on the LLM's ability to interpret and format the dateTime string correctly.
-
     // If the model returns null, default to an empty list to satisfy the schema.
     if (!output) {
       return { reminders: [] };
