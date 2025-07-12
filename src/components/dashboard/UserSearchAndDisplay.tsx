@@ -8,12 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
-import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder } from '@/lib/types';
+import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder, PrescriptionRecord } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
 import { extractRemindersFromPrescription } from '@/ai/flows/extract-reminders-from-prescription';
 import { enhancePrescription } from '@/ai/flows/enhance-prescription-flow';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, Bot, Sparkles } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, Bot, Sparkles, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
@@ -34,6 +34,7 @@ export function UserSearchAndDisplay() {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
+  const [prescriptionIsEnhanced, setPrescriptionIsEnhanced] = useState(false);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
@@ -71,6 +72,7 @@ export function UserSearchAndDisplay() {
     }
     setIsSearching(true);
     setFoundUser(null);
+    setPrescriptionIsEnhanced(false); // Reset on new search
 
     setTimeout(async () => {
       try {
@@ -162,6 +164,7 @@ export function UserSearchAndDisplay() {
     try {
       const result = await enhancePrescription({ prescriptionText });
       setPrescriptionText(result.enhancedText);
+      setPrescriptionIsEnhanced(true); // Enable the confirm button
       toast({ title: "Prescription Enhanced", description: "The prescription has been clarified by AI." });
     } catch (error) {
       console.error("Enhancement Error:", error);
@@ -176,32 +179,50 @@ export function UserSearchAndDisplay() {
       toast({ title: "Empty Prescription", description: "Please write a prescription before confirming.", variant: "destructive" });
       return;
     }
-    if (!foundUser) return;
+    if (!foundUser || !consultantUser) return;
 
     setIsConfirming(true);
-    toast({ title: "Processing Prescription...", description: "Please wait while the AI extracts reminders." });
+    toast({ title: "Processing Prescription...", description: "Please wait while the AI extracts reminders and saves the record." });
 
     try {
-        const result = await extractRemindersFromPrescription({ prescriptionText });
+        // 1. Extract reminders from the final text
+        const reminderResult = await extractRemindersFromPrescription({ prescriptionText });
 
-        if (!result.reminders || result.reminders.length === 0) {
+        if (!reminderResult.reminders || reminderResult.reminders.length === 0) {
           toast({ title: "No Reminders Found", description: "The AI could not find any specific reminders in the text.", variant: "destructive"});
-          setIsConfirming(false);
-          return;
         }
         
-        const newReminders: Reminder[] = result.reminders.map(r => ({
+        const newReminders: Reminder[] = reminderResult.reminders.map(r => ({
           ...r,
           id: `rem_${new Date(r.dateTime).getTime()}_${Math.random().toString(36).substr(2, 5)}`,
         }));
 
-        const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
-        await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
-        setFoundUser(prev => prev ? { ...prev, reminders: updatedReminders } : null);
+        // 2. Create the prescription history record
+        const newPrescriptionRecord: PrescriptionRecord = {
+          id: `presc_${Date.now()}`,
+          consultantId: consultantUser.id,
+          consultantName: `${(consultantUser.profile as any).firstName} ${(consultantUser.profile as any).lastName}`,
+          text: prescriptionText,
+          timestamp: new Date().toISOString(),
+        };
 
-        toast({ title: "Reminders Set!", description: `Successfully set ${newReminders.length} reminder(s) for the user.` });
+        // 3. Update Firestore with both new reminders and the new prescription record
+        const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
+        const updatedPrescriptions = [...(foundUser.prescriptions || []), newPrescriptionRecord];
+
+        await updateUserProfileDocument(foundUser.userId, { 
+          reminders: updatedReminders,
+          prescriptions: updatedPrescriptions,
+        });
         
+        // 4. Update local state
+        setFoundUser(prev => prev ? { ...prev, reminders: updatedReminders, prescriptions: updatedPrescriptions } : null);
+
+        toast({ title: "Success!", description: `Prescription saved and ${newReminders.length} reminder(s) set for the user.` });
+        
+        // 5. Reset the form
         setPrescriptionText('');
+        setPrescriptionIsEnhanced(false);
 
     } catch (error) {
         console.error("Prescription Processing Error:", error);
@@ -379,25 +400,28 @@ export function UserSearchAndDisplay() {
         <Card className="shadow-xl animate-in fade-in-50 duration-500">
             <CardHeader>
                 <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescription</CardTitle>
-                <CardDescription>Write the prescription, enhance it with AI for clarity, then confirm to set reminders for the user.</CardDescription>
+                <CardDescription>Write the prescription, click "Done" to enhance it with AI, then confirm to save it and set reminders for the user.</CardDescription>
             </CardHeader>
             <CardContent>
                <Textarea 
                 id="prescriptionText"
                 placeholder="e.g., Take Ibuprofen 200mg twice a day for 5 days. Follow-up with Dr. Smith in 2 weeks."
                 value={prescriptionText}
-                onChange={(e) => setPrescriptionText(e.target.value)}
+                onChange={(e) => {
+                    setPrescriptionText(e.target.value);
+                    setPrescriptionIsEnhanced(false); // Reset if user edits after enhancing
+                }}
                 rows={5}
                 className="w-full"
               />
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={handleEnhancePrescription} disabled={isEnhancing || !prescriptionText.trim()} className="w-full sm:w-auto" variant="outline">
-                  {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Enhance with AI
+                  {isEnhancing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                  Done
                 </Button>
                 <Separator orientation="vertical" className="h-6 hidden sm:block"/>
-                <Button onClick={handleConfirmAndRemind} disabled={isConfirming || !prescriptionText.trim()} className="w-full sm:flex-grow">
+                <Button onClick={handleConfirmAndRemind} disabled={isConfirming || !prescriptionText.trim() || !prescriptionIsEnhanced} className="w-full sm:flex-grow">
                   {isConfirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
                   Confirm & Set Reminders
                 </Button>

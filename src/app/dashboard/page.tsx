@@ -3,14 +3,15 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircle, CheckCircle2, History } from 'lucide-react';
-import type { EndUserProfile, SessionComment, ConsultantProfile } from '@/lib/types';
+import { Loader2, MessageSquare, Users, Briefcase, UserPlus, Activity, HelpCircle, CheckCircle2, History, FileSignature } from 'lucide-react';
+import type { EndUserProfile, SessionComment, ConsultantProfile, PrescriptionRecord } from '@/lib/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
 import { getEndUsersCount, getConsultantsCount, getNewEndUsersCount, getNewConsultantsCount } from '@/lib/firestore';
 import { translations } from '@/lib/translations';
+import { Separator } from '@/components/ui/separator';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -220,40 +221,78 @@ export default function DashboardPage() {
       )}
 
       {user.role === 'enduser' && endUserProfile && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl">
-              <div className="flex items-center">
-                <MessageSquare className="mr-2 h-5 w-5 text-primary" />
-                {t.dashboard.sessionsTitle}
-              </div>
-            </CardTitle>
-            <CardDescription>
-              {t.dashboard.sessionsDescription}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {endUserProfile.sessions && endUserProfile.sessions.length > 0 ? (
-              <ScrollArea className="h-72 w-full">
-                <div className="space-y-4 pr-4">
-                  {endUserProfile.sessions.slice().reverse().map((session: SessionComment) => (
-                    <div key={session.id} className="p-4 border rounded-lg bg-muted/10 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-1.5">
-                        <p className="font-semibold text-md text-foreground">{session.consultantName}</p>
-                        <p className="text-xs text-muted-foreground mt-1 sm:mt-0">
-                          {format(new Date(session.timestamp), "MMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{session.comment}</p>
-                    </div>
-                  ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl">
+                <div className="flex items-center">
+                  <MessageSquare className="mr-2 h-5 w-5 text-primary" />
+                  {t.dashboard.sessionsTitle}
                 </div>
-              </ScrollArea>
-            ) : (
-              <p className="text-center text-muted-foreground py-4">{t.dashboard.noSessions}</p>
-            )}
-          </CardContent>
-        </Card>
+              </CardTitle>
+              <CardDescription>
+                {t.dashboard.sessionsDescription}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {endUserProfile.sessions && endUserProfile.sessions.length > 0 ? (
+                <ScrollArea className="h-72 w-full">
+                  <div className="space-y-4 pr-4">
+                    {endUserProfile.sessions.slice().reverse().map((session: SessionComment) => (
+                      <div key={session.id} className="p-4 border rounded-lg bg-muted/10 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-1.5">
+                          <p className="font-semibold text-md text-foreground">{session.consultantName}</p>
+                          <p className="text-xs text-muted-foreground mt-1 sm:mt-0">
+                            {format(new Date(session.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                          </p>
+                        </div>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{session.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">{t.dashboard.noSessions}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl">
+                <div className="flex items-center">
+                  <FileSignature className="mr-2 h-5 w-5 text-primary" />
+                  Prescription History
+                </div>
+              </CardTitle>
+              <CardDescription>
+                A log of all prescriptions from your consultants.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {endUserProfile.prescriptions && endUserProfile.prescriptions.length > 0 ? (
+                <ScrollArea className="h-72 w-full">
+                  <div className="space-y-4 pr-4">
+                    {endUserProfile.prescriptions.slice().reverse().map((prescription: PrescriptionRecord) => (
+                      <div key={prescription.id} className="p-4 border rounded-lg bg-muted/10 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-1.5">
+                          <p className="font-semibold text-md text-foreground">{prescription.consultantName}</p>
+                          <p className="text-xs text-muted-foreground mt-1 sm:mt-0">
+                            {format(new Date(prescription.timestamp), "EEEE, MMM d, yyyy 'at' h:mm a")}
+                          </p>
+                        </div>
+                        <Separator className="my-2"/>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{prescription.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No prescription history found.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

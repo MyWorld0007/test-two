@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'enduser' | 'consultant' | 'admin';
 
 export type AccessRequestStatus = 'pending' | 'approved' | 'declined';
@@ -33,6 +34,14 @@ export interface SessionComment {
   timestamp: string;
 }
 
+export interface PrescriptionRecord {
+  id: string;
+  consultantId: string;
+  consultantName: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface Reminder {
   id: string;
   type: 'medication' | 'appointment';
@@ -62,6 +71,7 @@ export interface EndUserProfile {
   stage?: string;
   documents: Document[];
   sessions: SessionComment[];
+  prescriptions?: PrescriptionRecord[];
   accessRequests: AccessRequest[];
   reminders?: Reminder[];
   preferredLanguage?: string;
