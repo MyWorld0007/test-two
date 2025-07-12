@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Loader2, LogIn, UserPlus, FileText, ShieldCheck, MessageSquare } from 'lucide-react';
+import { LogIn, UserPlus, FileText, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
 import { HealthcareAnimation } from '@/components/auth/HealthcareAnimation';
