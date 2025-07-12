@@ -69,6 +69,9 @@ export interface EndUserProfile {
   gender: 'Male' | 'Female' | 'Other' | string;
   diseName?: string;
   stage?: string;
+  bloodType?: string;
+  state?: string;
+  city?: string;
   documents: Document[];
   sessions: SessionComment[];
   prescriptions?: PrescriptionRecord[];

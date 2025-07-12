@@ -16,6 +16,7 @@ import type { EndUserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { translations } from '@/lib/translations';
+import { indianStates } from '@/lib/indianStates';
 
 const profileSchema = z.object({
   uniqueId: z.string().optional(), // Added for display, will be disabled
@@ -26,12 +27,17 @@ const profileSchema = z.object({
   phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15, 'Phone number too long'),
   age: z.coerce.number().int().min(1, 'Age must be a positive number').max(120),
   gender: z.enum(['Male', 'Female', 'Other']),
+  bloodType: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
   diseName: z.string().optional(),
   stage: z.string().optional(),
   preferredLanguage: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export function UserProfileForm() {
   const { user, updateUserProfile } = useAuth();
@@ -48,6 +54,9 @@ export function UserProfileForm() {
       phone: profile?.phone || '',
       age: profile?.age || 0,
       gender: profile?.gender || 'Other',
+      bloodType: profile?.bloodType || '',
+      state: profile?.state || '',
+      city: profile?.city || '',
       diseName: profile?.diseName || '',
       stage: profile?.stage || '',
       preferredLanguage: profile?.preferredLanguage || 'English',
@@ -63,12 +72,22 @@ export function UserProfileForm() {
   
   const selectedLanguage = form.watch('preferredLanguage') as keyof typeof translations || 'English';
   const t = translations[selectedLanguage]?.userProfile || translations.English.userProfile;
+  const selectedState = form.watch('state');
 
   useEffect(() => {
     if (user?.role === 'enduser') {
       form.reset(getSafeProfileDefaults(user.profile as EndUserProfile));
     }
   }, [user, form, isEditing]); // Add isEditing to dependencies to reset form on cancel
+
+  useEffect(() => {
+    // When the state changes, reset the city field if it's no longer valid for the new state
+    const currentStateData = indianStates.find(s => s.name === selectedState);
+    const currentCity = form.getValues('city');
+    if (currentStateData && !currentStateData.cities.includes(currentCity || '')) {
+      form.setValue('city', '');
+    }
+  }, [selectedState, form]);
 
   if (user?.role !== 'enduser') {
     return <p>Invalid user role for this form.</p>;
@@ -128,7 +147,7 @@ export function UserProfileForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="uniqueId"
@@ -222,6 +241,66 @@ export function UserProfileForm() {
                         <SelectItem value="Male">{t.male}</SelectItem>
                         <SelectItem value="Female">{t.female}</SelectItem>
                         <SelectItem value="Other">{t.other}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="bloodType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.bloodType}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t.selectBloodType} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {bloodGroups.map(group => <SelectItem key={group} value={group}>{group}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.state}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t.selectState} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {indianStates.map(s => <SelectItem key={s.name} value={s.name}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t.city}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditing || !selectedState}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={!selectedState ? "Select a state first" : t.selectCity} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                         {indianStates.find(s => s.name === selectedState)?.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
