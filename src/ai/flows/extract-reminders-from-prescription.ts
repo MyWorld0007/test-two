@@ -97,6 +97,11 @@ const extractRemindersFlow = ai.defineFlow(
     // In a real-world scenario, you might have more complex logic here to handle various date/time formats,
     // but for this example, we rely on the LLM's ability to interpret and format the dateTime string correctly.
 
-    return output!;
+    // If the model returns null, default to an empty list to satisfy the schema.
+    if (!output) {
+      return { reminders: [] };
+    }
+
+    return output;
   }
 );
