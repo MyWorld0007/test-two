@@ -83,4 +83,26 @@
   body {
     @apply bg-page-background text-foreground;
   }
+  .healthcare-symbol {
+    position: absolute;
+    color: hsl(var(--primary) / 0.2);
+    top: -50px;
+  }
+  @keyframes fall {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(110vh); }
+  }
+  @keyframes fall-rotate {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(110vh) rotate(360deg); }
+  }
+  @keyframes fall-wave {
+      0% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(55vh) translateX(20px); }
+      100% { transform: translateY(110vh) translateX(0); }
+  }
+   @keyframes fall-fade {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(110vh); opacity: 0; }
+  }
 }
