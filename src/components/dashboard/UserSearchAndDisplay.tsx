@@ -382,7 +382,7 @@ export function UserSearchAndDisplay() {
                   id="prescription-upload" 
                   type="file" 
                   onChange={handlePrescriptionFileChange}
-                  accept=".pdf,.png,.jpg,.jpeg" 
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" 
                   className="flex-grow" 
                   aria-label="Choose prescription file"
                 />
