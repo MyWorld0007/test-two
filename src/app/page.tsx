@@ -1,12 +1,11 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LogIn, UserPlus, FileText, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
 import { HealthcareAnimation } from '@/components/auth/HealthcareAnimation';
+import { useState, useEffect } from 'react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
     <div className="flex flex-col items-center p-6 text-center bg-card/50 backdrop-blur-sm rounded-xl shadow-lg border border-border/20">
@@ -19,16 +18,17 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 );
 
 export default function HomePage() {
-  const [animationType, setAnimationType] = useState(1);
+  // We use a state to ensure the animation logic only runs on the client,
+  // preventing server-client mismatches that can cause errors.
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This will only run on the client, avoiding hydration mismatches.
-    setAnimationType(Math.floor(Math.random() * 4) + 1);
+    setIsClient(true);
   }, []);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-page-background text-foreground">
-      <HealthcareAnimation animationType={animationType} />
+      {isClient && <HealthcareAnimation animationType={Math.floor(Math.random() * 4) + 1} />}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 md:p-8">
         <header className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center">
             <AppLogo size="md"/>
