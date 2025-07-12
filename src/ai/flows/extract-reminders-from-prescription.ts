@@ -21,8 +21,12 @@ const ExtractRemindersInputSchema = z.object({
 export type ExtractRemindersInput = z.infer<typeof ExtractRemindersInputSchema>;
 
 const ReminderSchema = z.object({
-    title: z.string().describe("The reminder title, e.g., 'Take Paracetamol 500mg' or 'Appointment with Dr. Smith'."),
-    dateTime: z.string().datetime().describe("The full date and time for the reminder in ISO 8601 format."),
+    type: z.enum(['medication', 'appointment']).describe("The type of reminder."),
+    title: z.string().describe("For 'medication', the name and dosage (e.g., 'Paracetamol 500mg'). For 'appointment', the title (e.g., 'Follow-up appointment')."),
+    dateTime: z.string().datetime().describe("The full date and time for the reminder in ISO 8601 format. This should be the first instance if it's a recurring reminder."),
+    endDate: z.string().datetime().optional().describe("For medication with a duration (e.g., 'for 7 days'), this is the end date of the reminder period."),
+    notion: z.string().optional().describe("For medication, the instruction on when to take it relative to a meal (e.g., 'before breakfast', 'after dinner')."),
+    doctorName: z.string().optional().describe("For appointments, the name of the doctor for the follow-up."),
 });
 
 const ExtractRemindersOutputSchema = z.object({
@@ -39,9 +43,9 @@ const prompt = ai.definePrompt({
   name: 'extractRemindersPrompt',
   input: {schema: ExtractRemindersInputSchema},
   output: {schema: ExtractRemindersOutputSchema},
-  prompt: `You are an intelligent medical assistant. Your task is to analyze the provided prescription text and extract all medication schedules and follow-up appointments to create a list of reminders.
+  prompt: `You are an intelligent medical assistant. Your task is to analyze the provided prescription text and extract all medication schedules and follow-up appointments to create a list of structured reminders.
 
-  Today's date is ${new Date().toDateString()}. Use this as the anchor for all date calculations.
+  Today's date is ${new Date().toISOString()}. Use this as the anchor for all date and time calculations.
   
   Follow these time interpretation rules precisely:
   - If "breakfast" is mentioned, set the reminder time between 8:00 AM and 10:00 AM.
@@ -52,12 +56,21 @@ const prompt = ai.definePrompt({
   - For relative dates like "tomorrow", calculate the date based on today.
   - For relative periods like "in 2 weeks", calculate the date from today.
 
-  Analyze the prescription text to create reminders.
+  Analyze the prescription text to create reminders. For each item, populate all relevant fields in the schema.
 
-  - For medications: Identify the medication name, dosage, and frequency. Create a reminder for each specific time a medication should be taken. If a duration is mentioned (e.g., 'for 7 days'), create daily reminders for that entire period.
-  - For appointments: Identify the date and time of any follow-up appointments mentioned.
+  - For medications: 
+    - Set 'type' to 'medication'.
+    - 'title' should be the medication name and dosage (e.g., 'Ibuprofen 200mg').
+    - 'dateTime' is the first time the medication should be taken.
+    - If a duration is mentioned (e.g., 'for 7 days'), create daily reminders and set the 'endDate' to the last day of the period.
+    - Capture any meal-related instructions in the 'notion' field (e.g., 'after breakfast').
+  - For appointments: 
+    - Set 'type' to 'appointment'.
+    - 'title' should be 'Follow-up appointment' or similar.
+    - 'dateTime' is the date and time of the appointment.
+    - Capture the doctor's name in the 'doctorName' field.
 
-  Create a precise reminder for each event with a full ISO 8601 formatted dateTime. The title should be clear and concise.
+  Create a precise reminder for each event with a full ISO 8601 formatted dateTime.
   
   Prescription Text:
   {{{prescriptionText}}}
@@ -81,3 +94,4 @@ const extractRemindersFlow = ai.defineFlow(
     return output;
   }
 );
+

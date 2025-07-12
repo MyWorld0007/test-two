@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -13,10 +14,11 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2 } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2, Pill, User, Stethoscope } from 'lucide-react';
 import { translations } from '@/lib/translations';
+import { Badge } from '../ui/badge';
 
 const reminderSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -56,6 +58,7 @@ export function ReminderManager() {
 
     const newReminder: Reminder = {
       id: `rem_${Date.now()}`,
+      type: 'medication', // Manual reminders are categorized as medication for simplicity
       title,
       dateTime: combinedDateTime.toISOString(),
     };
@@ -82,6 +85,43 @@ export function ReminderManager() {
       toast({ title: 'Error', description: 'Could not delete reminder.', variant: 'destructive' });
     }
   };
+
+  const renderReminderContent = (reminder: Reminder) => {
+    if (reminder.type === 'appointment') {
+      return (
+        <div>
+          <p className="font-medium flex items-center"><Stethoscope className="mr-2 h-4 w-4" />{reminder.title}</p>
+          <p className="text-sm text-muted-foreground">
+            Next follow-up with {reminder.doctorName} in {formatDistanceToNow(parseISO(reminder.dateTime))}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+             On {format(parseISO(reminder.dateTime), "PPP 'at' p")}
+          </p>
+        </div>
+      );
+    }
+    
+    // Default to medication format
+    const notionText = reminder.notion ? <Badge variant="secondary" className="ml-2">{reminder.notion}</Badge> : '';
+    let dateText = '';
+    if (reminder.endDate) {
+       dateText = `From ${format(parseISO(reminder.dateTime), 'MMM d')} to ${format(parseISO(reminder.endDate), "MMM d, yyyy")}`;
+    } else {
+       dateText = `On ${format(parseISO(reminder.dateTime), 'PPP')}`;
+    }
+
+    return (
+       <div>
+        <div className="flex items-center">
+            <p className="font-medium flex items-center"><Pill className="mr-2 h-4 w-4" />{reminder.title}</p>
+            {notionText}
+        </div>
+        <p className="text-sm text-muted-foreground">
+            {dateText} at {format(parseISO(reminder.dateTime), 'p')}
+        </p>
+      </div>
+    )
+  }
   
   return (
     <Card className="shadow-lg">
@@ -93,17 +133,14 @@ export function ReminderManager() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h3 className="font-semibold mb-4">{t.upcomingReminders}</h3>
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-2">
               {reminders.length > 0 ? (
                 reminders
                   .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
                   .map((reminder) => (
                     <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                      <div>
-                        <p className="font-medium">{reminder.title}</p>
-                        <p className="text-sm text-muted-foreground">{format(new Date(reminder.dateTime), "PPP 'at' p")}</p>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive">
+                      {renderReminderContent(reminder)}
+                      <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

@@ -1,3 +1,4 @@
+
 export type UserRole = 'enduser' | 'consultant' | 'admin';
 
 export type AccessRequestStatus = 'pending' | 'approved' | 'declined';
@@ -34,8 +35,16 @@ export interface SessionComment {
 
 export interface Reminder {
   id: string;
+  type: 'medication' | 'appointment';
   title: string;
-  dateTime: string;
+  dateTime: string; // ISO string for the specific time
+  
+  // For medication
+  notion?: string; // "before breakfast", "after dinner"
+  endDate?: string; // for date ranges
+
+  // For appointment
+  doctorName?: string;
 }
 
 export interface EndUserProfile {
