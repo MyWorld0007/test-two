@@ -16,9 +16,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2, Pill, User, Stethoscope } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2, Pill, Stethoscope } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
 
 const reminderSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -58,7 +59,7 @@ export function ReminderManager() {
 
     const newReminder: Reminder = {
       id: `rem_${Date.now()}`,
-      type: 'medication', // Manual reminders are categorized as medication for simplicity
+      type: 'medication', 
       title,
       dateTime: combinedDateTime.toISOString(),
     };
@@ -86,22 +87,7 @@ export function ReminderManager() {
     }
   };
 
-  const renderReminderContent = (reminder: Reminder) => {
-    if (reminder.type === 'appointment') {
-      return (
-        <div>
-          <p className="font-medium flex items-center"><Stethoscope className="mr-2 h-4 w-4" />{reminder.title}</p>
-          <p className="text-sm text-muted-foreground">
-            Next follow-up with {reminder.doctorName} in {formatDistanceToNow(parseISO(reminder.dateTime))}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-             On {format(parseISO(reminder.dateTime), "PPP 'at' p")}
-          </p>
-        </div>
-      );
-    }
-    
-    // Default to medication format
+  const renderSingleReminder = (reminder: Reminder) => {
     const notionText = reminder.notion ? <Badge variant="secondary" className="ml-2">{reminder.notion}</Badge> : '';
     let dateText = '';
     if (reminder.endDate) {
@@ -111,17 +97,41 @@ export function ReminderManager() {
     }
 
     return (
-       <div>
-        <div className="flex items-center">
-            <p className="font-medium flex items-center"><Pill className="mr-2 h-4 w-4" />{reminder.title}</p>
-            {notionText}
-        </div>
-        <p className="text-sm text-muted-foreground">
-            {dateText} at {format(parseISO(reminder.dateTime), 'p')}
-        </p>
+       <div className="flex items-center justify-between w-full">
+         <div className="flex-grow">
+            <p className="text-sm text-muted-foreground">
+                {dateText} at {format(parseISO(reminder.dateTime), 'p')}
+                {notionText}
+            </p>
+         </div>
+        <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
+            <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     )
   }
+
+  const appointmentReminders = reminders.filter(r => r.type === 'appointment').sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+  const medicationReminders = reminders.filter(r => r.type === 'medication');
+
+  const groupedMedicationReminders = medicationReminders.reduce((acc, reminder) => {
+      const title = reminder.title;
+      if (!acc[title]) {
+          acc[title] = [];
+      }
+      acc[title].push(reminder);
+      return acc;
+  }, {} as Record<string, Reminder[]>);
+
+  for (const title in groupedMedicationReminders) {
+    groupedMedicationReminders[title].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+  }
+
+  const sortedMedicationGroups = Object.entries(groupedMedicationReminders).sort(([, remindersA], [, remindersB]) => {
+      const firstDateA = new Date(remindersA[0].dateTime).getTime();
+      const firstDateB = new Date(remindersB[0].dateTime).getTime();
+      return firstDateA - firstDateB;
+  });
   
   return (
     <Card className="shadow-lg">
@@ -133,18 +143,42 @@ export function ReminderManager() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h3 className="font-semibold mb-4">{t.upcomingReminders}</h3>
-            <div className="space-y-3 max-h-[34rem] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[34rem] overflow-y-auto pr-2">
               {reminders.length > 0 ? (
-                reminders
-                  .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-                  .map((reminder) => (
-                    <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                      {renderReminderContent(reminder)}
-                      <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                <>
+                  {sortedMedicationGroups.map(([title, reminderGroup]) => (
+                    <div key={title} className="p-3 border rounded-lg bg-muted/50 space-y-2">
+                      <div className="flex items-center font-semibold">
+                          <Pill className="mr-2 h-5 w-5 text-primary" />
+                          <p>{title}</p>
+                      </div>
+                      {reminderGroup.map(reminder => (
+                          <div key={reminder.id}>
+                              {renderSingleReminder(reminder)}
+                          </div>
+                      ))}
                     </div>
-                  ))
+                  ))}
+
+                  {appointmentReminders.length > 0 && sortedMedicationGroups.length > 0 && <Separator className="my-4"/>}
+
+                  {appointmentReminders.map(reminder => (
+                     <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                        <div className="flex-grow">
+                          <p className="font-medium flex items-center"><Stethoscope className="mr-2 h-4 w-4 text-primary" />{reminder.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(parseISO(reminder.dateTime), { addSuffix: true })} with {reminder.doctorName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            On {format(parseISO(reminder.dateTime), "PPP 'at' p")}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                  ))}
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">{t.noReminders}</p>
               )}
