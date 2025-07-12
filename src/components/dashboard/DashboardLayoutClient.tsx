@@ -66,16 +66,12 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     }
   }, [user, isLoading, router]);
 
-  if (isClientLoading || isLoading) {
+  if (isClientLoading || isLoading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-page-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!user) {
-    return null; // Or a redirect component, though useEffect handles it
   }
   
   const preferredLanguage = (user.profile as EndUserProfile)?.preferredLanguage as keyof typeof translations || 'English';

@@ -1,10 +1,8 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
 import { Loader2, LogIn, UserPlus, FileText, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
@@ -21,8 +19,6 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 );
 
 export default function HomePage() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
   const [animationType, setAnimationType] = useState(1);
 
   useEffect(() => {
@@ -30,36 +26,6 @@ export default function HomePage() {
     setAnimationType(Math.floor(Math.random() * 4) + 1);
   }, []);
 
-  useEffect(() => {
-    // Redirect logged-in users to their dashboard once loading is complete
-    if (!isLoading && user) {
-      router.replace('/dashboard/user/profile');
-    }
-  }, [user, isLoading, router]);
-
-  // Show a loader only while authentication state is being determined
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-page-background p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Initializing MyDocula...</p>
-      </div>
-    );
-  }
-
-  // If loading is done and a user exists, show a redirecting loader.
-  // This prevents the landing page from flashing before the redirect happens.
-  if (user) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-page-background p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirecting to dashboard...</p>
-      </div>
-    );
-  }
-  
-  // If we reach here, it means isLoading is false and there is no user.
-  // Render the full landing page.
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-page-background text-foreground">
       <HealthcareAnimation animationType={animationType} />

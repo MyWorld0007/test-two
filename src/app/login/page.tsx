@@ -1,3 +1,4 @@
+
 'use client';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +12,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.push('/dashboard/user/profile');
+      router.push('/dashboard');
     }
   }, [user, isLoading, router]);
 
