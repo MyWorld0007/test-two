@@ -90,7 +90,7 @@ export function ReminderManager() {
   const renderSingleReminder = (reminder: Reminder) => {
     const notionText = reminder.notion ? <Badge variant="secondary" className="ml-2">{reminder.notion}</Badge> : '';
     let dateText = '';
-    if (reminder.endDate) {
+    if (reminder.endDate && reminder.endDate !== reminder.dateTime) {
        dateText = `From ${format(parseISO(reminder.dateTime), 'MMM d')} to ${format(parseISO(reminder.endDate), "MMM d, yyyy")}`;
     } else {
        dateText = `On ${format(parseISO(reminder.dateTime), 'PPP')}`;
@@ -160,7 +160,7 @@ export function ReminderManager() {
                     </div>
                   ))}
 
-                  {appointmentReminders.length > 0 && sortedMedicationGroups.length > 0 && <Separator className="my-4"/>}
+                  {(appointmentReminders.length > 0 && sortedMedicationGroups.length > 0) && <Separator className="my-4"/>}
 
                   {appointmentReminders.map(reminder => (
                      <div key={reminder.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
