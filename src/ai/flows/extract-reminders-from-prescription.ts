@@ -35,13 +35,48 @@ export async function extractRemindersFromPrescription(input: ExtractRemindersIn
   return extractRemindersFlow(input);
 }
 
+const documentTextExtractorTool = ai.defineTool({
+  name: 'documentTextExtractor',
+  description: 'Use this tool to extract text from a document (image, PDF, DOCX). This should be the first step for any document analysis.',
+  inputSchema: z.object({
+    documentDataUri: z
+      .string()
+      .describe("The document to process, as a data URI."),
+  }),
+  outputSchema: z.string().describe('The extracted plain text from the document.'),
+  async handler(input) {
+    // In a real-world scenario, this tool would use libraries like pdf-parse, mammoth.js, or an OCR service
+    // to extract text from different file types.
+    // For this prototype, we'll simulate the extraction to demonstrate the flow.
+    console.log('Calling documentTextExtractorTool...');
+    return `
+      Patient Name: Jane Doe
+      Date: ${new Date().toLocaleDateString()}
+      
+      Medication:
+      - Ibuprofen 200mg. Take 1 tablet twice a day for 5 days.
+      - Amoxicillin 500mg. Take 1 tablet every 8 hours for 7 days.
+      
+      Appointments:
+      - Follow-up with Dr. Smith in 2 weeks.
+      - Blood test scheduled for tomorrow at 9 AM.
+    `;
+  },
+});
+
+
 const prompt = ai.definePrompt({
   name: 'extractRemindersPrompt',
+  tools: [documentTextExtractorTool],
   input: {schema: ExtractRemindersInputSchema},
   output: {schema: ExtractRemindersOutputSchema},
   prompt: `You are an intelligent medical assistant. Your task is to analyze the provided prescription document and extract all medication schedules and follow-up appointments to create a list of reminders.
 
   Today's date is ${new Date().toDateString()}. Any mention of "daily", "every day", or specific times should be anchored to today's date for the start.
+  - For relative dates like "tomorrow", calculate the date based on today.
+  - For relative periods like "in 2 weeks", calculate the date from today.
+
+  First, use the 'documentTextExtractor' tool to get the text from the document. Then, analyze the text to create reminders.
 
   - For medications: Identify the medication name, dosage, and frequency (e.g., 'twice a day', 'at 8 am and 8 pm', 'before breakfast'). Create a reminder for each specific time a medication should be taken. If a duration is mentioned (e.g., 'for 7 days'), create daily reminders for that period.
   - For appointments: Identify the date and time of any follow-up appointments mentioned.
