@@ -47,12 +47,15 @@ const prompt = ai.definePrompt({
 
   Today's date is ${new Date().toISOString()}. Use this as the anchor for all date and time calculations.
   
-  Follow these time interpretation rules precisely:
-  - If "breakfast" is mentioned, set the reminder time between 8:00 AM and 10:00 AM.
-  - If "lunch" is mentioned, set the time between 12:00 PM and 2:00 PM.
-  - If "dinner" or "evening" is mentioned:
-    - For medication to be taken *before* dinner, set the time between 7:00 PM and 9:00 PM.
-    - For medication to be taken *after* dinner, set the time between 9:00 PM and 11:00 PM.
+  Follow these time interpretation rules with high precision:
+  - If the instruction is "before breakfast", set the time to exactly 8:00 AM.
+  - If the instruction is "after breakfast", set the time to exactly 10:00 AM.
+  - If the instruction just says "breakfast" without "before" or "after", set the time between 8:00 AM and 10:00 AM.
+  - If the instruction is "before lunch", set the time to exactly 1:00 PM (13:00).
+  - If the instruction is "after lunch", set the time to exactly 2:00 PM (14:00).
+  - If the instruction just says "lunch" without "before" or "after", set the time between 1:00 PM (13:00) and 2:00 PM (14:00).
+  - If the instruction is "before dinner" or related to evening, set the time between 7:00 PM (19:00) and 9:00 PM (21:00).
+  - If the instruction is "after dinner" or "post dinner", set the time between 9:00 PM (21:00) and 11:00 PM (23:00).
   - For relative dates like "tomorrow", calculate the date based on today.
   - For relative periods like "in 2 weeks", calculate the date from today.
 
@@ -94,4 +97,3 @@ const extractRemindersFlow = ai.defineFlow(
     return output;
   }
 );
-
