@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,10 +16,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2, Pill, Stethoscope } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2, BellRing, Loader2, Pill, Stethoscope, Edit } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const reminderSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -29,10 +30,18 @@ const reminderSchema = z.object({
 
 type ReminderFormValues = z.infer<typeof reminderSchema>;
 
+const editReminderSchema = z.object({
+  date: z.date({ required_error: 'A date is required.' }),
+  time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
+});
+type EditReminderFormValues = z.infer<typeof editReminderSchema>;
+
+
 export function ReminderManager() {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
   const form = useForm<ReminderFormValues>({
     resolver: zodResolver(reminderSchema),
@@ -41,6 +50,20 @@ export function ReminderManager() {
       time: '09:00',
     },
   });
+  
+  const editForm = useForm<EditReminderFormValues>({
+    resolver: zodResolver(editReminderSchema),
+  });
+
+  useEffect(() => {
+    if (editingReminder) {
+      const reminderDate = parseISO(editingReminder.dateTime);
+      editForm.reset({
+        date: reminderDate,
+        time: format(reminderDate, 'HH:mm'),
+      });
+    }
+  }, [editingReminder, editForm]);
 
   if (user?.role !== 'enduser') return null;
 
@@ -77,6 +100,27 @@ export function ReminderManager() {
     }
   };
 
+  const handleEditSubmit = async (data: EditReminderFormValues) => {
+    if (!editingReminder) return;
+
+    const { date, time } = data;
+    const [hours, minutes] = time.split(':').map(Number);
+    const newDateTime = new Date(date);
+    newDateTime.setHours(hours, minutes, 0, 0);
+
+    const updatedReminders = reminders.map(r => 
+      r.id === editingReminder.id ? { ...r, dateTime: newDateTime.toISOString() } : r
+    );
+
+    try {
+      await updateUserProfile({ reminders: updatedReminders });
+      toast({ title: 'Reminder Updated', description: 'The reminder time has been successfully changed.' });
+      setEditingReminder(null);
+    } catch (error) {
+      toast({ title: 'Update Failed', description: 'Could not update the reminder.', variant: 'destructive' });
+    }
+  };
+
   const deleteReminder = async (reminderId: string) => {
     const updatedReminders = reminders.filter((r) => r.id !== reminderId);
     try {
@@ -104,9 +148,14 @@ export function ReminderManager() {
                 {notionText}
             </div>
          </div>
-        <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
-            <Trash2 className="h-4 w-4" />
-        </Button>
+         <div className="flex items-center flex-shrink-0 ml-2">
+            <Button variant="ghost" size="icon" onClick={() => setEditingReminder(reminder)} className="text-muted-foreground hover:text-primary">
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4" />
+            </Button>
+         </div>
       </div>
     )
   }
@@ -134,6 +183,7 @@ export function ReminderManager() {
   });
   
   return (
+    <>
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center"><BellRing className="mr-2 h-5 w-5" />{t.cardTitle}</CardTitle>
@@ -173,9 +223,14 @@ export function ReminderManager() {
                             On {format(parseISO(reminder.dateTime), "PPP 'at' p")}
                           </p>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center flex-shrink-0 ml-2">
+                           <Button variant="ghost" size="icon" onClick={() => setEditingReminder(reminder)} className="text-muted-foreground hover:text-primary">
+                             <Edit className="h-4 w-4" />
+                           </Button>
+                           <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive">
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                        </div>
                       </div>
                   ))}
                 </>
@@ -265,5 +320,82 @@ export function ReminderManager() {
         </div>
       </CardContent>
     </Card>
+
+    <Dialog open={!!editingReminder} onOpenChange={(isOpen) => !isOpen && setEditingReminder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Reminder</DialogTitle>
+            <DialogDescription>
+              Change the date and time for your reminder: "{editingReminder?.title}".
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                 <FormField
+                    control={editForm.control}
+                    name="date"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>{t.formDate}</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>{t.formDatePlaceholder}</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                        control={editForm.control}
+                        name="time"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t.formTime}</FormLabel>
+                                <FormControl>
+                                    <Input type="time" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+              </div>
+              <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                    {editForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
