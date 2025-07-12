@@ -99,10 +99,10 @@ export function ReminderManager() {
     return (
        <div className="flex items-center justify-between w-full">
          <div className="flex-grow">
-            <p className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
                 {dateText} at {format(parseISO(reminder.dateTime), 'p')}
                 {notionText}
-            </p>
+            </div>
          </div>
         <Button variant="ghost" size="icon" onClick={() => deleteReminder(reminder.id)} className="text-destructive hover:text-destructive flex-shrink-0 ml-2">
             <Trash2 className="h-4 w-4" />
