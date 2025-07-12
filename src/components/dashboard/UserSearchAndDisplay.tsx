@@ -1,10 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -13,35 +10,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import type { EndUserProfile, SessionComment, Document as DocumentType, AccessRequest, ConsultantProfile, Reminder } from '@/lib/types';
 import { findUserByUniqueId, updateUserProfileDocument } from '@/lib/firestore';
+import { extractRemindersFromPrescription } from '@/ai/flows/extract-reminders-from-prescription';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { Search, UserCircle, FileText, MessageSquare, Send, Loader2, KeyRound, Clock, ShieldX, UserCheck, ShieldBan, Eye, Pill, UploadCloud } from 'lucide-react';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 
 const MAX_REJECTIONS = 3;
-
-const prescriptionSchema = z.object({
-  dateRange: z.object({
-      from: z.date(),
-      to: z.date().optional(),
-    })
-    .optional()
-    .refine((date) => !!date?.from, { message: "A date or date range is required." }),
-  reminders: z.array(z.object({
-    title: z.string().min(1, 'Title is required.'),
-    time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM).'),
-  })).min(1, 'You must add at least one reminder.'),
-}).refine((data) => data.dateRange?.from, {
-  message: "A date or date range is required.",
-  path: ["dateRange"], 
-});
-
-type PrescriptionFormValues = z.infer<typeof prescriptionSchema>;
 
 export function UserSearchAndDisplay() {
   const { user: consultantUser, updateUserProfile: updateConsultantProfile } = useAuth();
@@ -53,24 +29,11 @@ export function UserSearchAndDisplay() {
   const [isCommenting, setIsCommenting] = useState(false);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isPrescribing, setIsPrescribing] = useState(false);
+  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
-  const prescriptionForm = useForm<PrescriptionFormValues>({
-    resolver: zodResolver(prescriptionSchema),
-    defaultValues: {
-      dateRange: undefined,
-      reminders: [{ title: '', time: '09:00' }],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: prescriptionForm.control,
-    name: "reminders"
-  });
-
-
   useEffect(() => {
     if (foundUser && consultantUser) {
       const request = foundUser.accessRequests?.find(r => r.consultantId === consultantUser.id);
@@ -186,52 +149,63 @@ export function UserSearchAndDisplay() {
     
     setIsCommenting(false);
   };
-  
-  const handleSendReminder = async (data: PrescriptionFormValues) => {
-    if (!foundUser || !data.dateRange?.from) return;
-    setIsPrescribing(true);
 
-    const { dateRange, reminders } = data;
-    const startDate = dateRange.from;
-    const endDate = dateRange.to || startDate;
-
-    const allNewReminders: Reminder[] = [];
-    
-    let currentDate = new Date(startDate);
-    currentDate.setHours(0,0,0,0);
-
-    while (currentDate <= endDate) {
-        reminders.forEach((reminderItem, index) => {
-            const [hours, minutes] = reminderItem.time.split(':').map(Number);
-            
-            const combinedDateTime = new Date(currentDate);
-            combinedDateTime.setHours(hours, minutes, 0, 0);
-            
-            allNewReminders.push({
-                id: `rem_${combinedDateTime.getTime()}_${index}`,
-                title: reminderItem.title,
-                dateTime: combinedDateTime.toISOString(),
-            });
-        });
-        currentDate.setDate(currentDate.getDate() + 1);
+  const handlePrescriptionFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setPrescriptionFile(event.target.files[0]);
     }
-    
-    const updatedReminders = [...(foundUser.reminders || []), ...allNewReminders];
+  };
+  
+  const handleUploadPrescriptionAndSetReminders = async () => {
+    if (!prescriptionFile) {
+      toast({ title: "No file selected", description: "Please select a prescription file to upload.", variant: "destructive" });
+      return;
+    }
+    if (!foundUser) return;
+
+    setIsPrescribing(true);
+    toast({ title: "Processing Prescription...", description: "Please wait while we extract reminders." });
 
     try {
-        await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
-        setFoundUser(prevUser => prevUser ? { ...prevUser, reminders: updatedReminders } : null);
-        toast({ title: 'Reminders Sent!', description: `${allNewReminders.length} reminder(s) have been sent to the user over the selected date range.` });
-        prescriptionForm.reset({ 
-          dateRange: undefined,
-          reminders: [{ title: '', time: '09:00' }] 
+        const dataUri = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(prescriptionFile);
         });
+
+        const result = await extractRemindersFromPrescription({ prescriptionDataUri: dataUri });
+
+        if (!result.reminders || result.reminders.length === 0) {
+          toast({ title: "No Reminders Found", description: "The AI could not find any specific reminders in the document.", variant: "destructive"});
+          setIsPrescribing(false);
+          return;
+        }
+        
+        const newReminders: Reminder[] = result.reminders.map(r => ({
+          id: `rem_${new Date(r.dateTime).getTime()}_${Math.random().toString(36).substr(2, 5)}`,
+          title: r.title,
+          dateTime: r.dateTime,
+        }));
+
+        const updatedReminders = [...(foundUser.reminders || []), ...newReminders];
+        await updateUserProfileDocument(foundUser.userId, { reminders: updatedReminders });
+        setFoundUser(prev => prev ? { ...prev, reminders: updatedReminders } : null);
+
+        toast({ title: "Reminders Set!", description: `Successfully set ${newReminders.length} reminder(s) for the user.` });
+        
+        setPrescriptionFile(null); 
+        const fileInput = document.getElementById('prescription-upload') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+
     } catch (error) {
-        toast({ title: 'Error', description: 'Could not send reminders.', variant: 'destructive' });
+        console.error("Prescription Processing Error:", error);
+        toast({ title: "Processing Failed", description: (error as Error).message || "Could not process the prescription.", variant: "destructive" });
     } finally {
         setIsPrescribing(false);
     }
   };
+
 
   if (consultantUser?.role !== 'consultant') {
     return <p>This feature is for consultants only.</p>
@@ -399,123 +373,24 @@ export function UserSearchAndDisplay() {
 
         <Card className="shadow-xl animate-in fade-in-50 duration-500">
             <CardHeader>
-                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Prescribe & Set Reminders</CardTitle>
-                <CardDescription>Prescribe medication and set reminders for the end user. This will appear in their Reminders list.</CardDescription>
+                <CardTitle className="flex items-center"><Pill className="mr-2 h-5 w-5 text-primary" />Upload Prescription</CardTitle>
+                <CardDescription>Upload a prescription document. The AI will extract medication and appointment details to automatically create reminders for the user.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...prescriptionForm}>
-                  <form onSubmit={prescriptionForm.handleSubmit(handleSendReminder)} className="space-y-6">
-                    <FormField
-                      control={prescriptionForm.control}
-                      name="dateRange"
-                      render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                          <FormLabel>Date for Reminders</FormLabel>
-                          <Popover>
-                              <PopoverTrigger asChild>
-                              <FormControl>
-                                  <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                      "w-full justify-start pl-3 text-left font-normal",
-                                      !field.value?.from && "text-muted-foreground"
-                                  )}
-                                  >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                   {field.value?.from ? (
-                                    field.value.to ? (
-                                      <>
-                                        {format(field.value.from, "LLL dd, y")} -{" "}
-                                        {format(field.value.to, "LLL dd, y")}
-                                      </>
-                                    ) : (
-                                      format(field.value.from, "LLL dd, y")
-                                    )
-                                  ) : (
-                                    <span>Pick a date range</span>
-                                  )}
-                                  </Button>
-                              </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                  mode="range"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                  initialFocus
-                              />
-                              </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                    />
-
-                    <div className="space-y-4">
-                      <FormLabel>Medications &amp; Timings</FormLabel>
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="flex items-end gap-2 p-3 border rounded-md">
-                          <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField
-                              control={prescriptionForm.control}
-                              name={`reminders.${index}.title`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Title (Medicine, Dosage)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="e.g., Paracetamol 500mg" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={prescriptionForm.control}
-                              name={`reminders.${index}.time`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Time (24h format)</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0"
-                            onClick={() => remove(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
-                       <FormMessage>
-                        {prescriptionForm.formState.errors.reminders?.root?.message}
-                      </FormMessage>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => append({ title: '', time: '09:00' })}
-                        >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Reminder
-                        </Button>
-                        <Button type="submit" disabled={isPrescribing}>
-                            {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                            Send Reminders
-                        </Button>
-                    </div>
-                  </form>
-                </Form>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Input 
+                  id="prescription-upload" 
+                  type="file" 
+                  onChange={handlePrescriptionFileChange}
+                  accept=".pdf,.png,.jpg,.jpeg" 
+                  className="flex-grow" 
+                  aria-label="Choose prescription file"
+                />
+                <Button onClick={handleUploadPrescriptionAndSetReminders} disabled={!prescriptionFile || isPrescribing} className="w-full sm:w-auto">
+                  {isPrescribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                  Upload and Set Reminders
+                </Button>
+              </div>
             </CardContent>
         </Card>
       </div>
