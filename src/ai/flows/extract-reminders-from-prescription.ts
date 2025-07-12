@@ -44,7 +44,7 @@ const documentTextExtractorTool = ai.defineTool({
       .describe("The document to process, as a data URI."),
   }),
   outputSchema: z.string().describe('The extracted plain text from the document.'),
-  async handler(input) {
+  run: async (input) => {
     // In a real-world scenario, this tool would use libraries like pdf-parse, mammoth.js, or an OCR service
     // to extract text from different file types.
     // For this prototype, we'll simulate the extraction to demonstrate the flow.
