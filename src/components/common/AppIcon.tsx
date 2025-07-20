@@ -4,23 +4,35 @@ export function AppIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 200 80"
+      viewBox="0 0 100 100"
       {...props}
     >
       <defs>
-        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#2AF598" />
-          <stop offset="100%" stopColor="#009EFD" />
+        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#009EFD" />
+          <stop offset="100%" stopColor="#2AF598" />
         </linearGradient>
       </defs>
-      <g id="wing">
-        <path d="M90 50 L70 55 L73 65 L93 60 Z" fill="url(#logo-gradient)"/>
-        <path d="M82 37 L62 42 L65 52 L85 47 Z" fill="url(#logo-gradient)"/>
-        <path d="M74 24 L54 29 L57 39 L77 34 Z" fill="url(#logo-gradient)"/>
-        <path d="M66 11 L46 16 L49 26 L69 21 Z" fill="url(#logo-gradient)"/>
-        <path d="M58 -2 L38 3 L41 13 L61 8 Z" fill="url(#logo-gradient)"/>
-      </g>
-      <use href="#wing" transform="translate(200, 0) scale(-1, 1)" />
+      
+      {/* Medical Cross Background */}
+      <path 
+        d="M35 10 H65 V35 H90 V65 H65 V90 H35 V65 H10 V35 H35 Z" 
+        fill="url(#logo-gradient)" 
+        opacity="0.8"
+      />
+
+      {/* Interlocking Hands Shape */}
+      <path 
+        d="M30 50 C 30 35, 40 30, 50 30 C 60 30, 70 35, 70 50 C 70 65, 60 70, 50 70 C 40 70, 30 65, 30 50 Z" 
+        fill="none" 
+        stroke="url(#logo-gradient)" 
+        strokeWidth="10"
+      />
+       <path 
+        d="M50 30 C 40 30, 30 35, 30 50 L 50 50 Z" 
+        fill="url(#logo-gradient)"
+      />
+
     </svg>
   );
 }
