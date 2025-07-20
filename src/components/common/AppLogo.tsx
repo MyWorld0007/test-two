@@ -9,7 +9,7 @@ export function AppLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   return (
     <div className={`flex items-center ${containerClass}`} aria-label="MyDocula Logo">
       <AppIcon className={iconSize} />
-      <h1 className={`${textSize} font-bold text-primary`}>MyDocula</h1>
+      <span className={`${textSize} font-bold bg-gradient-to-r from-blue-500 to-teal-400 bg-clip-text text-transparent`}>MyDocula</span>
     </div>
   );
 }

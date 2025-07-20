@@ -24,14 +24,14 @@ export function AppIcon(props: SVGProps<SVGSVGElement>) {
       <path 
         d="M 40 45 C 30 45 30 55 40 55 L 60 55 C 70 55 70 45 60 45 L 40 45"
         fill="none"
-        stroke="hsl(var(--background))"
+        stroke="hsl(var(--card))"
         strokeWidth="8"
         strokeLinecap="round"
       />
       <path
         d="M 60 55 C 70 55 70 65 60 65 L 40 65 C 30 65 30 55 40 55"
         fill="none"
-        stroke="hsl(var(--background))"
+        stroke="hsl(var(--card))"
         strokeWidth="8"
         strokeLinecap="round"
       />
