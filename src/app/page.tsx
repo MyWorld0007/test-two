@@ -88,7 +88,7 @@ export default function HomePage() {
         <section className="mb-24">
             <div className="relative w-full h-auto aspect-[16/9] max-w-5xl mx-auto rounded-xl border-8 border-border/10 shadow-2xl overflow-hidden">
                 <Image
-                    src="/images/hero-image.png"
+                    src="https://placehold.co/1200x675.png"
                     alt="Doctor showing patient information on a tablet"
                     fill
                     className="object-cover"
@@ -130,7 +130,7 @@ export default function HomePage() {
                 </div>
                 <div className="hidden md:block p-8">
                      <Image
-                        src="/images/how-it-works.png"
+                        src="https://placehold.co/600x800.png"
                         alt="A diagram showing the workflow of uploading a document"
                         width={600}
                         height={800}
