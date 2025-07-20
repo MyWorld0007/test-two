@@ -1,15 +1,21 @@
 
 import { HeartPulse } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 
-export function AppLogo() {
+interface AppLogoProps {
+    size?: 'default' | 'lg';
+}
+
+export function AppLogo({ size = 'default' }: AppLogoProps) {
+  const iconSize = size === 'lg' ? "h-10 w-10" : "h-8 w-8";
+  const textSize = size === 'lg' ? "text-3xl" : "text-2xl";
+
   return (
-    <div className="flex items-center gap-2" aria-label="Profile Hub Logo">
-        <HeartPulse className="h-8 w-8 text-primary" />
-        <span className="text-2xl font-bold tracking-tight">
-            Profile Hub
+    <div className="flex items-center gap-2" aria-label="MyDocula Logo">
+        <HeartPulse className={`${iconSize} text-primary`} />
+        <span className={`${textSize} font-bold tracking-tight`}>
+            MyDocula
         </span>
     </div>
   );
 }
-
-    
