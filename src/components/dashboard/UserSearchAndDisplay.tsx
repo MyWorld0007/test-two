@@ -22,7 +22,7 @@ import { Separator } from '../ui/separator';
 const MAX_REJECTIONS = 3;
 
 export function UserSearchAndDisplay() {
-  const { user: consultantUser, updateUserProfile: updateConsultantProfile } = useAuth();
+  const { user: consultantUser } = useAuth();
   const { toast } = useToast();
   const [searchId, setSearchId] = useState('');
   const [foundUser, setFoundUser] = useState<EndUserProfile | null>(null);
@@ -39,7 +39,7 @@ export function UserSearchAndDisplay() {
   const consultantProfile = consultantUser?.profile as ConsultantProfile;
   
   useEffect(() => {
-    if (foundUser && consultantUser) {
+    if (foundUser && consultantUser?.id && consultantProfile) {
       const request = foundUser.accessRequests?.find(r => r.consultantId === consultantUser.id);
       if (request?.status === 'approved' && request.approvedAt) {
           const approvedTime = new Date(request.approvedAt).getTime();
@@ -58,7 +58,8 @@ export function UserSearchAndDisplay() {
             lastViewed: new Date().toISOString(),
           };
           const updatedAttendedUsers = [...(consultantProfile.attendedUsers || []), newEntry];
-          updateConsultantProfile({ ...consultantProfile, attendedUsers: updatedAttendedUsers });
+          
+          updateUserProfileDocument(consultantUser.id, { attendedUsers: updatedAttendedUsers });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -264,11 +265,10 @@ export function UserSearchAndDisplay() {
           </Card>
         );
       }
+      return renderUserProfile();
     }
     
     switch (status) {
-      case 'approved':
-        return renderUserProfile();
       case 'pending':
         return (
           <Alert>
@@ -485,3 +485,5 @@ export function UserSearchAndDisplay() {
     </div>
   );
 }
+
+    
