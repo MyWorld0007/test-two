@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 
 export function AppLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
