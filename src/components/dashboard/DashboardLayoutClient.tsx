@@ -44,12 +44,12 @@ const navItems: NavItem[] = [
   { href: '/dashboard/user/healthy-tips', label: 'Healthy Tips', translationKey: 'healthyTips', icon: HeartPulse, roles: ['enduser'] },
   { href: '/dashboard/consultant/profile', label: 'My Profile', translationKey: 'myProfile', icon: User, roles: ['consultant'] },
   { href: '/dashboard/consultant/view-user', label: 'View User', translationKey: 'viewUser', icon: Search, roles: ['consultant'] },
-  { href: '/dashboard/admin/users', label: 'Manage Users', translationKey: 'myProfile', icon: Users, roles: ['admin'] }, // Placeholder
-  { href: '/dashboard/admin/consultants', label: 'Manage Consultants', translationKey: 'myProfile', icon: Briefcase, roles: ['admin'] }, // Placeholder
-  { href: '/dashboard/admin/create-consultant', label: 'Create Consultant', translationKey: 'myProfile', icon: UserPlus, roles: ['admin'] }, // Placeholder
+  { href: '/dashboard/admin/users', label: 'Manage Users', translationKey: 'manageUsers', icon: Users, roles: ['admin'] },
+  { href: '/dashboard/admin/consultants', label: 'Manage Consultants', translationKey: 'manageConsultants', icon: Briefcase, roles: ['admin'] },
+  { href: '/dashboard/admin/create-consultant', label: 'Create Consultant', translationKey: 'createConsultant', icon: UserPlus, roles: ['admin'] },
   { href: '/dashboard/admin/access', label: 'Access Control', translationKey: 'accessControl', icon: ShieldAlert, roles: ['admin'] },
   { href: '/dashboard/admin/insurance', label: 'Insurance', translationKey: 'insurance', icon: Landmark, roles: ['admin'] },
-  { href: '/dashboard/admin/data-explorer', label: 'Data Explorer', translationKey: 'myProfile', icon: Database, roles: ['admin'] }, // Placeholder
+  { href: '/dashboard/admin/data-explorer', label: 'Data Explorer', translationKey: 'dataExplorer', icon: Database, roles: ['admin'] },
 ];
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
