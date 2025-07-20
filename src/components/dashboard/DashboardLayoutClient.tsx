@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/common/AppLogo';
-import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella, Database, UserPlus, BellRing } from 'lucide-react';
+import { LayoutDashboard, User, FileText, Users, Briefcase, LogOut, Settings, ShieldCheck, Loader2, Search, KeyRound, ShieldAlert, Landmark, Umbrella, Database, UserPlus, BellRing, HeartPulse } from 'lucide-react';
 import type { UserRole, EndUserProfile } from '@/lib/types';
 import { translations } from '@/lib/translations';
 
@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/user/reminders', label: 'Reminders', translationKey: 'reminders', icon: BellRing, roles: ['enduser'] },
   { href: '/dashboard/user/access', label: 'Access Control', translationKey: 'accessControl', icon: KeyRound, roles: ['enduser'] },
   { href: '/dashboard/user/insurance', label: 'Insurance', translationKey: 'insurance', icon: Umbrella, roles: ['enduser'] },
+  { href: '/dashboard/user/healthy-tips', label: 'Healthy Tips', translationKey: 'healthyTips', icon: HeartPulse, roles: ['enduser'] },
   { href: '/dashboard/consultant/profile', label: 'My Profile', translationKey: 'myProfile', icon: User, roles: ['consultant'] },
   { href: '/dashboard/consultant/view-user', label: 'View User', translationKey: 'viewUser', icon: Search, roles: ['consultant'] },
   { href: '/dashboard/admin/users', label: 'Manage Users', translationKey: 'myProfile', icon: Users, roles: ['admin'] }, // Placeholder

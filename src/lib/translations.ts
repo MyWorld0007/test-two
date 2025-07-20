@@ -12,6 +12,7 @@ export const translations = {
       reminders: "Reminders",
       accessControl: "Access Control",
       insurance: "Insurance",
+      healthyTips: "Healthy Tips",
       viewUser: "View User",
     },
     userMenu: {
@@ -142,6 +143,7 @@ export const translations = {
       reminders: "रिमाइंडर",
       accessControl: "एक्सेस कंट्रोल",
       insurance: "बीमा",
+      healthyTips: "स्वास्थ्य सुझाव",
       viewUser: "उपयोगकर्ता देखें",
     },
     userMenu: {
@@ -272,6 +274,7 @@ export const translations = {
       reminders: "অনুস্মারক",
       accessControl: "অ্যাক্সেস কন্ট্রোল",
       insurance: "বীমা",
+      healthyTips: "স্বাস্থ্য টিপস",
       viewUser: "ব্যবহারকারী দেখুন",
     },
     userMenu: {
@@ -402,6 +405,7 @@ export const translations = {
       reminders: "स्मरणपत्रे",
       accessControl: "प्रवेश नियंत्रण",
       insurance: "विमा",
+      healthyTips: "आरोग्य टिप्स",
       viewUser: "वापरकर्ता पहा",
     },
     userMenu: {
@@ -532,6 +536,7 @@ export const translations = {
       reminders: "రిమైండర్లు",
       accessControl: "ప్రాప్యత నియంత్రణ",
       insurance: "భీమా",
+      healthyTips: "ఆరోగ్య చిట్కాలు",
       viewUser: "பயனரைப் பார்க்கவும்",
     },
     userMenu: {
@@ -662,6 +667,7 @@ export const translations = {
       reminders: "రిమైండర్‌లు",
       accessControl: "యాక్సెస్ కంట్రోల్",
       insurance: "భీమా",
+      healthyTips: "ఆరోగ్య చిట్కాలు",
       viewUser: "వినియోగదారుని వీక్షించండి",
     },
     userMenu: {
@@ -792,6 +798,7 @@ export const translations = {
       reminders: "રીમાઇન્ડર્સ",
       accessControl: "એક્સેસ કંટ્રોલ",
       insurance: "વીમો",
+      healthyTips: "આરોગ્ય ટિપ્સ",
       viewUser: "વપરાશકર્તા જુઓ",
     },
     userMenu: {
@@ -922,6 +929,7 @@ export const translations = {
       reminders: "ಜ್ಞಾಪನೆಗಳು",
       accessControl: "ಪ್ರವೇಶ ನಿಯಂತ್ರಣ",
       insurance: "ವಿಮೆ",
+      healthyTips: "ಆರೋಗ್ಯ ಸಲಹೆಗಳು",
       viewUser: "ಬಳಕೆದಾರರನ್ನು ವೀಕ್ಷಿಸಿ",
     },
     userMenu: {
@@ -1052,6 +1060,7 @@ export const translations = {
       reminders: "ഓർമ്മപ്പെടുത്തലുകൾ",
       accessControl: "പ്രവേശന നിയന്ത്രണം",
       insurance: "ഇൻഷുറൻസ്",
+      healthyTips: "ആരോഗ്യ നുറുങ്ങുകൾ",
       viewUser: "ഉപയോക്താവിനെ കാണുക",
     },
     userMenu: {
@@ -1182,6 +1191,7 @@ export const translations = {
       reminders: "ਰੀਮਾਈਂਡਰ",
       accessControl: "ਪਹੁੰਚ ਨਿਯੰਤਰਣ",
       insurance: "ਬੀਮਾ",
+      healthyTips: "ਸਿਹਤ ਸੁਝਾਅ",
       viewUser: "ਉਪਭੋਗਤਾ ਵੇਖੋ",
     },
     userMenu: {
