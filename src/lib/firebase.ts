@@ -9,7 +9,7 @@ export const firebaseConfig = {
   authDomain: "mydocula.firebaseapp.com",
   databaseURL: "https://mydocula-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "mydocula",
-  storageBucket: "mydocula.firebasestorage.app",
+  storageBucket: "mydocula.appspot.com",
   messagingSenderId: "319035347653",
   appId: "1:319035347653:web:d49fe21684c0cdddded6ac",
   measurementId: "G-0WZ03GE55F"
