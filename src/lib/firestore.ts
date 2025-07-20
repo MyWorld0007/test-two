@@ -1,5 +1,6 @@
 
 
+
 import { db, firebaseConfig, auth } from './firebase';
 import {
   doc,
@@ -35,22 +36,24 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
     // this will self-correct the profile in Firestore to be an admin profile.
     if (email === 'admin@example.com' && role !== 'admin') {
       const name = profileData.firstName ? `${profileData.firstName} ${profileData.lastName}` : 'Admin User';
+      const creationTime = (profileData.createdAt as Timestamp)?.toDate() || new Date();
       const adminProfile: AdminProfile = {
         role: 'admin',
         adminId: uid,
         name: name,
         email: email,
-        createdAt: (profileData.createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        createdAt: creationTime.toISOString(),
       };
 
       // Overwrite the incorrect profile with the correct admin profile
-      await setDoc(userDocRef, {...adminProfile, createdAt: profileData.createdAt || Timestamp.now()});
+      await setDoc(userDocRef, {...adminProfile, createdAt: Timestamp.fromDate(creationTime)});
 
-      profileData = adminProfile;
+      // **CRITICAL FIX**: Use the newly created adminProfile as the source of truth
+      profileData = adminProfile; 
       role = 'admin';
     }
     
-    // Convert Timestamps to ISO strings
+    // Convert Timestamps to ISO strings for client-side consumption
     if (profileData.createdAt && profileData.createdAt instanceof Timestamp) {
         profileData.createdAt = profileData.createdAt.toDate().toISOString();
     }
