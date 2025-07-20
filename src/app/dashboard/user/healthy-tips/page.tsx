@@ -15,6 +15,7 @@ import { PageTitle } from '@/components/common/PageTitle';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 type DietaryPreference = 'Veg' | 'Non-Veg' | 'Both';
 
@@ -24,6 +25,7 @@ export default function HealthyTipsPage() {
   const [tips, setTips] = useState<HealthyTipsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dietaryPreference, setDietaryPreference] = useState<DietaryPreference>('Both');
+  const [userQuery, setUserQuery] = useState('');
 
   if (user?.role !== 'enduser') return null;
 
@@ -50,6 +52,7 @@ export default function HealthyTipsPage() {
         age: userProfile.age,
         gender: userProfile.gender,
         dietaryPreference: dietaryPreference,
+        userQuery: userQuery.trim(),
       });
       setTips(result);
       toast({ title: 'Tips Generated!', description: 'Your personalized health tips are ready.' });
@@ -87,36 +90,48 @@ export default function HealthyTipsPage() {
         <CardHeader>
           <CardTitle className="flex items-center"><HeartPulse className="mr-2 h-5 w-5 text-primary" /> Your Personalized Tips</CardTitle>
           <CardDescription>
-            Select your diet preference, then click the button to get AI-powered health and wellness tips.
+            Select your diet preference, add any specific requests, then click the button to get AI-powered health and wellness tips.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <Label className="font-semibold">1. Select Your Dietary Preference</Label>
-            <RadioGroup
-              value={dietaryPreference}
-              onValueChange={(value: DietaryPreference) => setDietaryPreference(value)}
-              className="mt-2 grid grid-cols-3 gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Veg" id="veg" />
-                <Label htmlFor="veg" className="flex items-center gap-2 cursor-pointer"><Leaf/> Veg</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Non-Veg" id="non-veg" />
-                <Label htmlFor="non-veg" className="flex items-center gap-2 cursor-pointer"><Beef/> Non-Veg</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Both" id="both" />
-                <Label htmlFor="both" className="flex items-center gap-2 cursor-pointer"><Salad/> Both</Label>
-              </div>
-            </RadioGroup>
+          <div className="space-y-4">
+            <div>
+                <Label className="font-semibold">1. Select Your Dietary Preference</Label>
+                <RadioGroup
+                value={dietaryPreference}
+                onValueChange={(value: DietaryPreference) => setDietaryPreference(value)}
+                className="mt-2 grid grid-cols-3 gap-4"
+                >
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Veg" id="veg" />
+                    <Label htmlFor="veg" className="flex items-center gap-2 cursor-pointer"><Leaf/> Veg</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Non-Veg" id="non-veg" />
+                    <Label htmlFor="non-veg" className="flex items-center gap-2 cursor-pointer"><Beef/> Non-Veg</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Both" id="both" />
+                    <Label htmlFor="both" className="flex items-center gap-2 cursor-pointer"><Salad/> Both</Label>
+                </div>
+                </RadioGroup>
+            </div>
+            <div>
+                <Label htmlFor="userQuery" className="font-semibold">2. Add Specific Requests (Optional)</Label>
+                <Input 
+                    id="userQuery"
+                    placeholder="e.g., 'Suggest low-impact exercises' or 'I prefer a gluten-free diet'"
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    className="mt-2"
+                />
+            </div>
           </div>
           
           <Separator/>
 
           <div>
-            <Label className="font-semibold">2. Generate Your Tips</Label>
+            <Label className="font-semibold">3. Generate Your Tips</Label>
             <Button onClick={handleGenerateTips} disabled={isLoading} className="w-full mt-2">
                 {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

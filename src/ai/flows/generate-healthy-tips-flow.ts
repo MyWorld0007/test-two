@@ -17,6 +17,7 @@ const HealthyTipsInputSchema = z.object({
   age: z.number().describe("The user's age in years."),
   gender: z.string().describe("The user's gender (e.g., 'Male', 'Female', 'Other')."),
   dietaryPreference: z.enum(['Veg', 'Non-Veg', 'Both']).describe("The user's dietary preference."),
+  userQuery: z.string().optional().describe("An optional specific request from the user regarding diet or exercise preferences."),
 });
 export type HealthyTipsInput = z.infer<typeof HealthyTipsInputSchema>;
 
@@ -58,6 +59,11 @@ const prompt = ai.definePrompt({
   - Age: {{{age}}}
   - Gender: {{{gender}}}
   - Dietary Preference: {{{dietaryPreference}}}
+
+  {{#if userQuery}}
+  The user has a specific request: "{{{userQuery}}}"
+  Incorporate this request into your suggestions ONLY IF it is related to diet or exercise. If the query is unrelated (e.g., asking for financial advice, a joke, etc.), IGNORE the user's query and generate the standard health tips based on their profile.
+  {{/if}}
 
   Please provide the following:
   1.  **Exercise Tips**: Suggest 3-5 simple, safe exercises.
