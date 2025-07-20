@@ -56,17 +56,9 @@ export default function AdminManageUsersPage() {
   };
 
   const handleDeleteUser = (userId: string, role: UserRole) => {
-    // This is a client-side mock deletion. A real app would call a server function.
-    if (role === 'enduser') {
-      setEndUsers(prev => prev.filter(u => u.userId !== userId));
-    } else if (role === 'consultant') {
-      setConsultants(prev => prev.filter(c => c.consultantId !== userId));
-    } else if (role === 'admin') {
-      setAdmins(prev => prev.filter(a => a.adminId !== userId));
-    }
     toast({
-      title: "User Removed (UI Only)",
-      description: `User ${userId} has been removed from the list. This is a mock action.`,
+      title: "Not Implemented",
+      description: `Delete functionality for ${userId} is not yet available. This requires a backend function.`,
     });
   };
 
@@ -351,5 +343,3 @@ export default function AdminManageUsersPage() {
     </>
   );
 }
-
-    

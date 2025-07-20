@@ -69,7 +69,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   if (isClientLoading || isLoading || !user) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-page-background">
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -95,7 +95,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
     const parts = name.split(' ');
-    if (parts.length > 1) {
+    if (parts.length > 1 && parts[parts.length -1]) {
       return parts[0][0] + parts[parts.length - 1][0];
     }
     return name.substring(0, 2);
@@ -107,7 +107,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
+      <Sidebar variant="sidebar" side="left" className="border-r">
         <SidebarHeader className="p-4 items-start">
            <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
             <AppLogo />

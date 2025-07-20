@@ -1,3 +1,4 @@
+
 'use client';
 import { PageTitle } from '@/components/common/PageTitle';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -44,11 +45,9 @@ export default function AdminManageConsultantsPage() {
   };
 
   const handleDeleteConsultant = (consultantId: string) => {
-    // In a real app, you would call a Firestore delete function here.
-    setConsultants(prevConsultants => prevConsultants.filter(c => c.consultantId !== consultantId));
     toast({
-      title: "Consultant Removed (UI Only)",
-      description: `Consultant ${consultantId} has been removed from the list.`,
+      title: "Not Implemented",
+      description: `Delete functionality for ${consultantId} is not yet available. This requires a backend function.`,
     });
   };
 
