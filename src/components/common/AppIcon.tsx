@@ -18,21 +18,23 @@ export function AppIcon(props: SVGProps<SVGSVGElement>) {
       <path 
         d="M35 10 H65 V35 H90 V65 H65 V90 H35 V65 H10 V35 H35 Z" 
         fill="url(#logo-gradient)" 
-        opacity="0.8"
       />
 
       {/* Interlocking Hands Shape */}
       <path 
-        d="M30 50 C 30 35, 40 30, 50 30 C 60 30, 70 35, 70 50 C 70 65, 60 70, 50 70 C 40 70, 30 65, 30 50 Z" 
-        fill="none" 
-        stroke="url(#logo-gradient)" 
-        strokeWidth="10"
+        d="M 40 45 C 30 45 30 55 40 55 L 60 55 C 70 55 70 45 60 45 L 40 45"
+        fill="none"
+        stroke="hsl(var(--background))"
+        strokeWidth="8"
+        strokeLinecap="round"
       />
-       <path 
-        d="M50 30 C 40 30, 30 35, 30 50 L 50 50 Z" 
-        fill="url(#logo-gradient)"
+      <path
+        d="M 60 55 C 70 55 70 65 60 65 L 40 65 C 30 65 30 55 40 55"
+        fill="none"
+        stroke="hsl(var(--background))"
+        strokeWidth="8"
+        strokeLinecap="round"
       />
-
     </svg>
   );
 }
