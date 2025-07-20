@@ -43,7 +43,7 @@ export default function HomePage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border/30">
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
             <Link href="/" aria-label="Home">
-                <AppLogo size="md"/>
+                <AppLogo />
             </Link>
             <nav className="hidden md:flex gap-6 items-center">
                 <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Features</Link>
@@ -71,7 +71,7 @@ export default function HomePage() {
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Unified & Secure.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                MyDocula is the single, secure home for all your medical records. Upload, manage, and share with your consultants—all under your control.
+                Profile Hub is the single, secure home for all your medical records. Upload, manage, and share with your consultants—all under your control.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" className="shadow-lg">
@@ -148,8 +148,8 @@ export default function HomePage() {
                     <p className="text-lg text-muted-foreground mt-4">Don't just take our word for it. Here's what people are saying.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <TestimonialCard quote="MyDocula has been a game-changer. I can finally keep all my family's medical records organized and accessible for any appointment." author="Priya S." role="End User"/>
-                    <TestimonialCard quote="As a specialist, getting a comprehensive patient history is crucial. MyDocula makes it secure and straightforward, saving valuable time during consultations." author="Dr. Ankit Verma" role="Consultant"/>
+                    <TestimonialCard quote="Profile Hub has been a game-changer. I can finally keep all my family's medical records organized and accessible for any appointment." author="Priya S." role="End User"/>
+                    <TestimonialCard quote="As a specialist, getting a comprehensive patient history is crucial. Profile Hub makes it secure and straightforward, saving valuable time during consultations." author="Dr. Ankit Verma" role="Consultant"/>
                     <TestimonialCard quote="Managing my chronic condition means juggling a lot of paperwork. This platform has simplified my life immensely. Highly recommended!" author="Rohan M." role="End User"/>
                 </div>
             </div>
@@ -173,14 +173,14 @@ export default function HomePage() {
       <footer className="border-t bg-card">
         <div className="container mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-2">
-            <AppLogo size="sm"/>
+            <AppLogo />
           </div>
           <div className="flex gap-4 mt-4 md:mt-0">
             <Link href="#features" className="text-sm text-muted-foreground hover:text-primary">Features</Link>
             <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">Login</Link>
             <Link href="/register" className="text-sm text-muted-foreground hover:text-primary">Sign Up</Link>
           </div>
-          <p className="text-sm text-muted-foreground mt-4 md:mt-0">&copy; {new Date().getFullYear()} MyDocula. All Rights Reserved.</p>
+          <p className="text-sm text-muted-foreground mt-4 md:mt-0">&copy; {new Date().getFullYear()} Profile Hub. All Rights Reserved.</p>
         </div>
       </footer>
     </div>
