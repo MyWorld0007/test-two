@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from '@/hooks/useAuth';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { AppLogo } from '@/components/common/AppLogo';
 import { Separator } from '../ui/separator';
 import type { UserRole } from '@/lib/types';
@@ -80,9 +81,16 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-full max-w-md shadow-xl">
-      <CardHeader className="items-center text-center">
-        <AppLogo size="lg" />
+    <Card className="w-full max-w-md shadow-xl relative">
+      <Link href="/" passHref>
+        <Button variant="ghost" size="icon" className="absolute top-4 left-4">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+      </Link>
+      <CardHeader className="items-center text-center pt-12">
+        <Link href="/">
+          <AppLogo size="lg" />
+        </Link>
         <CardTitle className="text-2xl font-bold mt-4">Create an Account</CardTitle>
         <CardDescription>Join MyDocula to manage your profile.</CardDescription>
       </CardHeader>
