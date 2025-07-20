@@ -78,6 +78,7 @@ export interface EndUserProfile {
   accessRequests: AccessRequest[];
   reminders?: Reminder[];
   preferredLanguage?: string;
+  dietaryPreference?: 'Veg' | 'Non-Veg' | 'Both';
   lastLoginAt?: string;
   createdAt?: string;
 }

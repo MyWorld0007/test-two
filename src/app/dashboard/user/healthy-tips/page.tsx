@@ -10,14 +10,20 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateHealthyTips, type HealthyTipsOutput } from '@/ai/flows/generate-healthy-tips-flow';
 import type { EndUserProfile } from '@/lib/types';
-import { Lightbulb, Loader2, Sparkles, Dumbbell, Utensils, CalendarDays, ListX, HeartPulse, ShieldAlert, Calendar } from 'lucide-react';
+import { Lightbulb, Loader2, Sparkles, Dumbbell, Utensils, ListX, HeartPulse, ShieldAlert, Leaf, Beef, Salad } from 'lucide-react';
 import { PageTitle } from '@/components/common/PageTitle';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+
+type DietaryPreference = 'Veg' | 'Non-Veg' | 'Both';
 
 export default function HealthyTipsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tips, setTips] = useState<HealthyTipsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [dietaryPreference, setDietaryPreference] = useState<DietaryPreference>('Both');
 
   if (user?.role !== 'enduser') return null;
 
@@ -43,6 +49,7 @@ export default function HealthyTipsPage() {
         stage: userProfile.stage || 'Not specified',
         age: userProfile.age,
         gender: userProfile.gender,
+        dietaryPreference: dietaryPreference,
       });
       setTips(result);
       toast({ title: 'Tips Generated!', description: 'Your personalized health tips are ready.' });
@@ -80,18 +87,45 @@ export default function HealthyTipsPage() {
         <CardHeader>
           <CardTitle className="flex items-center"><HeartPulse className="mr-2 h-5 w-5 text-primary" /> Your Personalized Tips</CardTitle>
           <CardDescription>
-            Get AI-powered health and wellness tips based on your profile information. Click the button to start.
+            Select your diet preference, then click the button to get AI-powered health and wellness tips.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Button onClick={handleGenerateTips} disabled={isLoading} className="w-full">
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {tips ? 'Regenerate Tips' : 'Generate My Healthy Tips'}
-          </Button>
+        <CardContent className="space-y-6">
+          <div>
+            <Label className="font-semibold">1. Select Your Dietary Preference</Label>
+            <RadioGroup
+              value={dietaryPreference}
+              onValueChange={(value: DietaryPreference) => setDietaryPreference(value)}
+              className="mt-2 grid grid-cols-3 gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Veg" id="veg" />
+                <Label htmlFor="veg" className="flex items-center gap-2 cursor-pointer"><Leaf/> Veg</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Non-Veg" id="non-veg" />
+                <Label htmlFor="non-veg" className="flex items-center gap-2 cursor-pointer"><Beef/> Non-Veg</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Both" id="both" />
+                <Label htmlFor="both" className="flex items-center gap-2 cursor-pointer"><Salad/> Both</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          <Separator/>
+
+          <div>
+            <Label className="font-semibold">2. Generate Your Tips</Label>
+            <Button onClick={handleGenerateTips} disabled={isLoading} className="w-full mt-2">
+                {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {tips ? 'Regenerate Tips' : 'Generate My Healthy Tips'}
+            </Button>
+          </div>
 
            {isLoading && (
               <div className="flex flex-col items-center justify-center p-8 text-center">

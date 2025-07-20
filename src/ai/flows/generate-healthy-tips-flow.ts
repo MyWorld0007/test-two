@@ -16,6 +16,7 @@ const HealthyTipsInputSchema = z.object({
   stage: z.string().describe("The stage of the disease, if applicable (e.g., 'Stage 2', 'Early')."),
   age: z.number().describe("The user's age in years."),
   gender: z.string().describe("The user's gender (e.g., 'Male', 'Female', 'Other')."),
+  dietaryPreference: z.enum(['Veg', 'Non-Veg', 'Both']).describe("The user's dietary preference."),
 });
 export type HealthyTipsInput = z.infer<typeof HealthyTipsInputSchema>;
 
@@ -56,12 +57,13 @@ const prompt = ai.definePrompt({
   - Stage: {{{stage}}}
   - Age: {{{age}}}
   - Gender: {{{gender}}}
+  - Dietary Preference: {{{dietaryPreference}}}
 
   Please provide the following:
   1.  **Exercise Tips**: Suggest 3-5 simple, safe exercises.
-  2.  **Daily Diet**: Provide a sample meal idea for breakfast, lunch, dinner, and snacks for a single day.
-  3.  **Weekly Diet Plan**: Outline a brief, sample meal plan for a few days of the week (e.g., Monday, Wednesday, Friday).
-  4.  **Monthly Diet Plan**: Provide a high-level plan for a month, broken into 4 weeks. For each week, suggest a general dietary theme or focus (e.g., "Week 1: Focus on hydration and fiber").
+  2.  **Daily Diet**: Provide a sample meal idea for breakfast, lunch, dinner, and snacks for a single day, strictly adhering to the user's dietary preference (Veg, Non-Veg, or Both).
+  3.  **Weekly Diet Plan**: Outline a brief, sample meal plan for a few days of the week (e.g., Monday, Wednesday, Friday), strictly adhering to the user's dietary preference.
+  4.  **Monthly Diet Plan**: Provide a high-level plan for a month, broken into 4 weeks. For each week, suggest a general dietary theme or focus, keeping the user's dietary preference in mind.
   5.  **Things to Avoid**: List 3-5 foods or habits that should be avoided or limited given the user's condition.
   
   Keep the advice practical, easy to understand, and encouraging. Frame it as general guidance for a healthier lifestyle.
