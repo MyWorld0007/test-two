@@ -1,6 +1,4 @@
 
-
-
 import { db, firebaseConfig, auth } from './firebase';
 import {
   doc,
@@ -16,10 +14,9 @@ import {
   Timestamp,
   arrayUnion,
 } from 'firebase/firestore';
-import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, SessionComment, AccessRequest, AccessRequestStatus, InsurancePolicy } from './types';
+import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, InsurancePolicy } from './types';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-
 
 // ================== User Profile Functions ==================
 
@@ -28,30 +25,8 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    let profileData = userDocSnap.data();
-    let role = profileData.role;
-    const email = profileData.email;
-
-    // Special check: If the user is admin@example.com but their role isn't 'admin',
-    // this will self-correct the profile in Firestore to be an admin profile.
-    if (email === 'admin@example.com' && role !== 'admin') {
-      const name = profileData.firstName ? `${profileData.firstName} ${profileData.lastName}` : 'Admin User';
-      const creationTime = (profileData.createdAt as Timestamp)?.toDate() || new Date();
-      const adminProfile: AdminProfile = {
-        role: 'admin',
-        adminId: uid,
-        name: name,
-        email: email,
-        createdAt: creationTime.toISOString(),
-      };
-
-      // Overwrite the incorrect profile with the correct admin profile
-      await setDoc(userDocRef, {...adminProfile, createdAt: Timestamp.fromDate(creationTime)});
-
-      // **CRITICAL FIX**: Use the newly created adminProfile as the source of truth
-      profileData = adminProfile; 
-      role = 'admin';
-    }
+    const profileData = userDocSnap.data();
+    const role = profileData.role;
     
     // Convert Timestamps to ISO strings for client-side consumption
     if (profileData.createdAt && profileData.createdAt instanceof Timestamp) {
@@ -61,15 +36,13 @@ export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | n
         profileData.lastLoginAt = profileData.lastLoginAt.toDate().toISOString();
     }
 
-
     return {
       id: uid,
-      email: email,
+      email: profileData.email,
       role: role,
       profile: profileData as EndUserProfile | ConsultantProfile | AdminProfile,
     };
   } else {
-    // This case might happen if an auth record exists but the firestore doc creation failed.
     return null;
   }
 };
@@ -85,13 +58,10 @@ export const createUserProfileDocument = async (
     let finalRole = role;
     const creationTimestamp = Timestamp.now();
 
-
-    // Special check to enforce admin role for a specific email
     if (email === 'admin@example.com') {
       finalRole = 'admin';
     }
 
-    // Based on the user's role, we create a different data structure.
     if (finalRole === 'enduser') {
         profile = {
             role: 'enduser',
@@ -122,7 +92,7 @@ export const createUserProfileDocument = async (
             attendedUsers: [],
             createdAt: creationTimestamp.toDate().toISOString(),
         };
-    } else { // admin
+    } else {
         profile = {
             role: 'admin',
             adminId: uid,
@@ -131,18 +101,15 @@ export const createUserProfileDocument = async (
             createdAt: creationTimestamp.toDate().toISOString(),
         }
     }
-    // We save the structured profile data to the 'users' collection 
-    // with the document ID being the user's authentication UID.
+
     await setDoc(doc(db, "users", uid), {...profile, createdAt: creationTimestamp});
     
-    // We return the complete user object for immediate use in the app.
     return { id: uid, email, role: finalRole, profile };
 };
 
 
 export const updateUserProfileDocument = async (uid: string, data: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
     const userDocRef = doc(db, 'users', uid);
-    // Convert ISO string date back to Firestore Timestamp if present
     const dataToUpdate = { ...data };
     if (dataToUpdate.lastLoginAt) {
       dataToUpdate.lastLoginAt = Timestamp.fromDate(new Date(dataToUpdate.lastLoginAt)) as any;
@@ -152,7 +119,6 @@ export const updateUserProfileDocument = async (uid: string, data: Partial<EndUs
 
 export const addDocumentToUser = async (uid: string, newDoc: DocumentType) => {
   const userDocRef = doc(db, 'users', uid);
-  // Atomically add a new document to the "documents" array field.
   await updateDoc(userDocRef, {
     documents: arrayUnion(newDoc)
   });
@@ -165,17 +131,12 @@ export const createConsultantByAdmin = async (
   firstName: string,
   lastName: string
 ): Promise<{ success: boolean; message?: string }> => {
-  // Create a temporary secondary Firebase app. This allows us to create a new user
-  // without affecting the currently logged-in admin's authentication state.
   const tempAppName = `temp-app-create-consultant-${Date.now()}`;
   const tempApp = initializeApp(firebaseConfig, tempAppName);
   const tempAuth = getAuth(tempApp);
 
   try {
-    // This creates the user in Firebase Authentication using the temporary app instance.
     const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
-    
-    // This creates the corresponding profile document in Firestore using the main db instance.
     await createUserProfileDocument(
       userCredential.user.uid,
       email,
@@ -183,14 +144,10 @@ export const createConsultantByAdmin = async (
       lastName,
       'consultant'
     );
-    
-    // Clean up the temporary app instance after successful creation.
     await deleteApp(tempApp);
     return { success: true };
   } catch (error: any) {
     console.error("Admin Consultant Creation Error:", error);
-    
-    // Ensure the temporary app is cleaned up even if an error occurs.
     await deleteApp(tempApp);
 
     let message = 'An unknown error occurred.';
@@ -204,9 +161,6 @@ export const createConsultantByAdmin = async (
       case 'auth/weak-password':
         message = 'The password is too weak. It must be at least 8 characters long.';
         break;
-      case 'auth/operation-not-allowed':
-          message = 'Email/Password sign-up is not enabled in the Firebase Console.';
-          break;
       default:
         message = 'Failed to create consultant. Please try again.';
     }
@@ -217,7 +171,7 @@ export const createConsultantByAdmin = async (
 export const sendPasswordResetLink = async (email: string): Promise<{ success: boolean; message?: string }> => {
   try {
     await sendPasswordResetEmail(auth, email);
-    return { success: true };
+    return { success: true, message: `Password reset link sent to ${email}.` };
   } catch (error: any) {
     console.error("Password Reset Error:", error);
     let message = "An error occurred while sending the password reset email.";
@@ -291,7 +245,6 @@ export const findUserByUniqueId = async (uniqueId: string): Promise<EndUserProfi
     if (querySnapshot.empty) {
         return null;
     }
-    // Assuming uniqueId is truly unique, return the first result.
     return querySnapshot.docs[0].data() as EndUserProfile;
 };
 
@@ -307,7 +260,6 @@ export const getInsurancePolicies = async (): Promise<InsurancePolicy[]> => {
         policies.push({ 
             ...data, 
             id: doc.id,
-            // Firestore Timestamps need to be converted to strings for the app
             createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
         } as InsurancePolicy);
     });
