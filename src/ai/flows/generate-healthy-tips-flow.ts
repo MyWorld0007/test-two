@@ -31,6 +31,10 @@ const HealthyTipsOutputSchema = z.object({
       day: z.string().describe("The day of the week (e.g., Monday)."),
       meals: z.string().describe("A brief description of meals for that day."),
   })).describe("A sample meal plan for a week."),
+  monthlyDietPlan: z.array(z.object({
+      week: z.string().describe("The week number (e.g., 'Week 1')."),
+      focus: z.string().describe("The dietary focus or theme for that week."),
+  })).describe("A sample high-level meal plan for a month, broken down by week."),
   thingsToAvoid: z.array(z.string()).describe('A list of foods, ingredients, or habits the user should avoid.'),
 });
 export type HealthyTipsOutput = z.infer<typeof HealthyTipsOutputSchema>;
@@ -45,7 +49,7 @@ const prompt = ai.definePrompt({
   output: {schema: HealthyTipsOutputSchema},
   prompt: `You are a helpful AI health assistant. Your role is to provide supportive, general wellness advice. You are not a doctor and your advice should not be considered a medical prescription.
 
-  Based on the following user profile, generate a set of healthy lifestyle tips.
+  Based on the following user profile, generate a set of healthy lifestyle tips. Consider the user's age and disease severity when making suggestions. For example, recommend less strenuous exercises for older users or those with advanced stages.
 
   User Profile:
   - Condition: {{{diseaseName}}}
@@ -55,9 +59,10 @@ const prompt = ai.definePrompt({
 
   Please provide the following:
   1.  **Exercise Tips**: Suggest 3-5 simple, safe exercises.
-  2.  **Daily Diet**: Provide a sample meal idea for breakfast, lunch, dinner, and snacks.
+  2.  **Daily Diet**: Provide a sample meal idea for breakfast, lunch, dinner, and snacks for a single day.
   3.  **Weekly Diet Plan**: Outline a brief, sample meal plan for a few days of the week (e.g., Monday, Wednesday, Friday).
-  4.  **Things to Avoid**: List 3-5 foods or habits that should be avoided or limited given the user's condition.
+  4.  **Monthly Diet Plan**: Provide a high-level plan for a month, broken into 4 weeks. For each week, suggest a general dietary theme or focus (e.g., "Week 1: Focus on hydration and fiber").
+  5.  **Things to Avoid**: List 3-5 foods or habits that should be avoided or limited given the user's condition.
   
   Keep the advice practical, easy to understand, and encouraging. Frame it as general guidance for a healthier lifestyle.
   `,
