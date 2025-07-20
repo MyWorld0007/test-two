@@ -40,7 +40,7 @@ const TestimonialCard = ({ quote, author, role }: { quote: string, author: strin
 
 export default function HomePage() {
   return (
-    <div className="w-full bg-page-background text-foreground overflow-x-hidden">
+    <div className="w-full bg-background text-foreground overflow-x-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border/30">
         <div className="container mx-auto flex h-20 items-center justify-between px-4">
             <Link href="/" aria-label="Home">
@@ -187,5 +187,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

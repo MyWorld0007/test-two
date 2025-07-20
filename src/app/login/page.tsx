@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   if (isLoading || (!isLoading && user)) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-page-background p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading...</p>
       </div>
@@ -26,7 +26,7 @@ export default function LoginPage() {
   }
   
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-page-background p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <LoginForm />
     </main>
   );
