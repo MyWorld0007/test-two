@@ -66,7 +66,7 @@ export default function AdminManageUsersPage() {
     }
     toast({
       title: "User Removed (UI Only)",
-      description: `User ${userId} has been removed from the list.`,
+      description: `User ${userId} has been removed from the list. This is a mock action.`,
     });
   };
 
@@ -351,3 +351,5 @@ export default function AdminManageUsersPage() {
     </>
   );
 }
+
+    

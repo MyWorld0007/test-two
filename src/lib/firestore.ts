@@ -20,26 +20,30 @@ import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 
 
 // ================== User Profile Functions ==================
 
+// Converts Firestore Timestamps to ISO strings for any object.
+const convertTimestamps = (data: any) => {
+    for (const key in data) {
+        if (data[key] instanceof Timestamp) {
+            data[key] = data[key].toDate().toISOString();
+        }
+    }
+    return data;
+}
+
 export const getUserProfile = async (uid: string): Promise<AuthenticatedUser | null> => {
   const userDocRef = doc(db, 'users', uid);
   const userDocSnap = await getDoc(userDocRef);
 
   if (userDocSnap.exists()) {
-    const profileData = userDocSnap.data();
-    const role = profileData.role;
+    let profileData = userDocSnap.data();
     
-    // Convert Timestamps to ISO strings for client-side consumption
-    if (profileData.createdAt && profileData.createdAt instanceof Timestamp) {
-        profileData.createdAt = profileData.createdAt.toDate().toISOString();
-    }
-    if (profileData.lastLoginAt && profileData.lastLoginAt instanceof Timestamp) {
-        profileData.lastLoginAt = profileData.lastLoginAt.toDate().toISOString();
-    }
+    // Convert timestamps before returning
+    profileData = convertTimestamps(profileData);
 
     return {
       id: uid,
       email: profileData.email,
-      role: role,
+      role: profileData.role,
       profile: profileData as EndUserProfile | ConsultantProfile | AdminProfile,
     };
   } else {
@@ -56,7 +60,7 @@ export const createUserProfileDocument = async (
 ): Promise<AuthenticatedUser> => {
     let profile: EndUserProfile | ConsultantProfile | AdminProfile;
     let finalRole = role;
-    const creationTimestamp = Timestamp.now();
+    const creationTimestamp = new Date().toISOString();
 
     if (email === 'admin@example.com') {
       finalRole = 'admin';
@@ -76,7 +80,7 @@ export const createUserProfileDocument = async (
             documents: [],
             sessions: [],
             accessRequests: [],
-            createdAt: creationTimestamp.toDate().toISOString(),
+            createdAt: creationTimestamp,
         };
     } else if (finalRole === 'consultant') { 
         profile = {
@@ -90,7 +94,7 @@ export const createUserProfileDocument = async (
             totalExperience: 0,
             specializationField: '',
             attendedUsers: [],
-            createdAt: creationTimestamp.toDate().toISOString(),
+            createdAt: creationTimestamp,
         };
     } else {
         profile = {
@@ -98,11 +102,11 @@ export const createUserProfileDocument = async (
             adminId: uid,
             name: `${firstName} ${lastName}`,
             email,
-            createdAt: creationTimestamp.toDate().toISOString(),
+            createdAt: creationTimestamp,
         }
     }
 
-    await setDoc(doc(db, "users", uid), {...profile, createdAt: creationTimestamp});
+    await setDoc(doc(db, "users", uid), {...profile, createdAt: Timestamp.fromDate(new Date(creationTimestamp))});
     
     return { id: uid, email, role: finalRole, profile };
 };
@@ -111,6 +115,7 @@ export const createUserProfileDocument = async (
 export const updateUserProfileDocument = async (uid: string, data: Partial<EndUserProfile | ConsultantProfile | AdminProfile>) => {
     const userDocRef = doc(db, 'users', uid);
     const dataToUpdate = { ...data };
+    // Convert ISO string back to Firestore Timestamp before updating
     if (dataToUpdate.lastLoginAt) {
       dataToUpdate.lastLoginAt = Timestamp.fromDate(new Date(dataToUpdate.lastLoginAt)) as any;
     }
@@ -189,13 +194,8 @@ export const getAllConsultants = async (): Promise<ConsultantProfile[]> => {
     const querySnapshot = await getDocs(q);
     const consultants: ConsultantProfile[] = [];
     querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.createdAt && data.createdAt instanceof Timestamp) {
-            data.createdAt = data.createdAt.toDate().toISOString();
-        }
-        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
-            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
-        }
+        let data = doc.data();
+        data = convertTimestamps(data);
         consultants.push(data as ConsultantProfile)
     });
     return consultants;
@@ -207,13 +207,8 @@ export const getAllAdmins = async (): Promise<AdminProfile[]> => {
     const querySnapshot = await getDocs(q);
     const admins: AdminProfile[] = [];
     querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.createdAt && data.createdAt instanceof Timestamp) {
-            data.createdAt = data.createdAt.toDate().toISOString();
-        }
-        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
-            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
-        }
+        let data = doc.data();
+        data = convertTimestamps(data);
         admins.push(data as AdminProfile)
     });
     return admins;
@@ -225,13 +220,8 @@ export const getAllEndUsers = async (): Promise<EndUserProfile[]> => {
     const querySnapshot = await getDocs(q);
     const users: EndUserProfile[] = [];
     querySnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.createdAt && data.createdAt instanceof Timestamp) {
-            data.createdAt = data.createdAt.toDate().toISOString();
-        }
-        if (data.lastLoginAt && data.lastLoginAt instanceof Timestamp) {
-            data.lastLoginAt = data.lastLoginAt.toDate().toISOString();
-        }
+        let data = doc.data();
+        data = convertTimestamps(data);
         users.push(data as EndUserProfile)
     });
     return users;
@@ -245,7 +235,9 @@ export const findUserByUniqueId = async (uniqueId: string): Promise<EndUserProfi
     if (querySnapshot.empty) {
         return null;
     }
-    return querySnapshot.docs[0].data() as EndUserProfile;
+    let data = querySnapshot.docs[0].data();
+    data = convertTimestamps(data);
+    return data as EndUserProfile;
 };
 
 
@@ -324,3 +316,5 @@ export const getNewConsultantsCount = async (days: number): Promise<number> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.size;
 };
+
+    
