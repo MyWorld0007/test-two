@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from '@/components/common/AppLogo';
-import { ArrowRight, UploadCloud, ShieldCheck, Share2, MessageSquare, HeartHandshake, Quote } from 'lucide-react';
+import { ArrowRight, UploadCloud, ShieldCheck, Share2, MessageSquare, HeartHandshake, Quote, HeartPulse } from 'lucide-react';
 import Image from 'next/image';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
@@ -88,7 +88,7 @@ export default function HomePage() {
         <section className="mb-24">
             <div className="relative w-full h-auto aspect-[16/9] max-w-5xl mx-auto rounded-xl border-8 border-border/10 shadow-2xl overflow-hidden">
                 <Image
-                    src="https://placehold.co/1200x675.png"
+                    src="/images/hero-image.png"
                     alt="Doctor showing patient information on a tablet"
                     fill
                     className="object-cover"
@@ -111,7 +111,7 @@ export default function HomePage() {
                     <FeatureCard icon={MessageSquare} title="Consultant Communication" description="Receive and review session notes, prescriptions, and reminders directly from your healthcare consultants."/>
                     <FeatureCard icon={UploadCloud} title="AI-Powered Organization" description="Our smart system automatically scans and categorizes your documents, saving you time and effort." />
                     <FeatureCard icon={HeartHandshake} title="Insurance Simplified" description="Browse and connect with insurance providers directly through the platform, simplifying your options." />
-                    <FeatureCard icon={AppLogo} title="Unified Health Profile" description="All your information—from lab results to consultant notes—in one comprehensive, easy-to-manage profile." />
+                    <FeatureCard icon={HeartPulse} title="Unified Health Profile" description="All your information—from lab results to consultant notes—in one comprehensive, easy-to-manage profile." />
                 </div>
             </div>
         </section>
@@ -130,7 +130,7 @@ export default function HomePage() {
                 </div>
                 <div className="hidden md:block p-8">
                      <Image
-                        src="https://placehold.co/600x800.png"
+                        src="/images/how-it-works.png"
                         alt="A diagram showing the workflow of uploading a document"
                         width={600}
                         height={800}
