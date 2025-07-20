@@ -37,19 +37,26 @@ export default function AdminManageConsultantsPage() {
 
 
   const handleEditConsultant = (consultantId: string) => {
-    alert(`Edit consultant: ${consultantId} (not implemented)`);
+    toast({
+      title: "Not Implemented",
+      description: `Edit functionality for ${consultantId} is not yet available.`,
+    });
   };
 
   const handleDeleteConsultant = (consultantId: string) => {
-     if (confirm(`Are you sure you want to delete consultant ${consultantId}? This cannot be undone.`)) {
-      // In a real app, you would call a Firestore delete function here.
-      setConsultants(prevConsultants => prevConsultants.filter(c => c.consultantId !== consultantId));
-      alert(`Consultant ${consultantId} deleted. (Client-side only)`);
-    }
+    // In a real app, you would call a Firestore delete function here.
+    setConsultants(prevConsultants => prevConsultants.filter(c => c.consultantId !== consultantId));
+    toast({
+      title: "Consultant Removed (UI Only)",
+      description: `Consultant ${consultantId} has been removed from the list.`,
+    });
   };
 
   const handleViewConsultant = (consultantId: string) => {
-    alert(`View consultant: ${consultantId} (not implemented)`);
+    toast({
+      title: "Not Implemented",
+      description: `View functionality for ${consultantId} is not yet available.`,
+    });
   };
 
   return (

@@ -48,24 +48,32 @@ export default function AdminManageUsersPage() {
   }, [toast]);
 
   const handleEditUser = (userId: string) => {
-    alert(`Edit user: ${userId} (not implemented)`);
+    toast({
+      title: "Not Implemented",
+      description: `Edit functionality for ${userId} is not yet available.`,
+    });
   };
 
   const handleDeleteUser = (userId: string, role: UserRole) => {
-     if (confirm(`Are you sure you want to delete this user? This cannot be undone.`)) {
-      if (role === 'enduser') {
-        setEndUsers(prev => prev.filter(u => u.userId !== userId));
-      } else if (role === 'consultant') {
-        setConsultants(prev => prev.filter(c => c.consultantId !== userId));
-      } else if (role === 'admin') {
-        setAdmins(prev => prev.filter(a => a.adminId !== userId));
-      }
-      alert(`User ${userId} deleted. (Client-side only)`);
+    // This is a client-side mock deletion. A real app would call a server function.
+    if (role === 'enduser') {
+      setEndUsers(prev => prev.filter(u => u.userId !== userId));
+    } else if (role === 'consultant') {
+      setConsultants(prev => prev.filter(c => c.consultantId !== userId));
+    } else if (role === 'admin') {
+      setAdmins(prev => prev.filter(a => a.adminId !== userId));
     }
+    toast({
+      title: "User Removed (UI Only)",
+      description: `User ${userId} has been removed from the list.`,
+    });
   };
 
   const handleViewUser = (userId: string) => {
-    alert(`View user: ${userId} (not implemented)`);
+    toast({
+      title: "Not Implemented",
+      description: `View functionality for ${userId} is not yet available.`,
+    });
   };
 
   const handleResetPassword = async (email: string) => {
@@ -164,9 +172,25 @@ export default function AdminManageUsersPage() {
                                     </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteUser(user.userId, 'enduser')} title="Delete User">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Delete User">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This action cannot be undone. This will only remove the user from the UI.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(user.userId, 'enduser')}>Delete</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </TableCell>
                             </TableRow>
                             ))}
@@ -233,9 +257,25 @@ export default function AdminManageUsersPage() {
                                     </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteUser(consultant.consultantId, 'consultant')} title="Delete Consultant">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Delete Consultant">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This action cannot be undone. This will only remove the user from the UI.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(consultant.consultantId, 'consultant')}>Delete</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </TableCell>
                             </TableRow>
                             ))}
@@ -277,9 +317,25 @@ export default function AdminManageUsersPage() {
                                 <Button variant="ghost" size="icon" onClick={() => handleEditUser(admin.adminId)} title="Edit Admin">
                                     <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteUser(admin.adminId, 'admin')} title="Delete Admin">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="Delete Admin">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This action cannot be undone. This will only remove the user from the UI.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(admin.adminId, 'admin')}>Delete</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </TableCell>
                             </TableRow>
                             ))}

@@ -57,9 +57,7 @@ const scanDocumentPrompt = ai.definePrompt({
   - 'Estimate': For billing estimates or insurance pre-authorizations.
   - 'Other': For any document that does not fit the above categories.
 
-  Use the 'tesseract' tool to extract the text from the document provided. Based on the extracted text, determine the most appropriate category and return both the text and the category.
-
-  Document: {{media url=documentDataUri}}
+  Use the 'tesseract' tool with the documentDataUri to extract the text from the document provided. Based on the extracted text, determine the most appropriate category and return both the text and the category.
   `,
 });
 
