@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAllUsers, updateUserProfileDocument } from '@/lib/firestore';
+import { getAllEndUsers, getAllConsultants, updateUserProfileDocument } from '@/lib/firestore';
 import type { EndUserProfile, ConsultantProfile, AccessRequest, AccessRequestStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,9 +30,12 @@ export function AdminAccessManager() {
     const fetchAllUsers = async () => {
         setIsLoading(true);
         try {
-            const users = await getAllUsers();
-            setEndUsers(users.filter(u => 'userId' in u) as EndUserProfile[]);
-            setConsultants(users.filter(u => 'consultantId' in u) as ConsultantProfile[]);
+            const [endUsersData, consultantsData] = await Promise.all([
+              getAllEndUsers(),
+              getAllConsultants()
+            ]);
+            setEndUsers(endUsersData);
+            setConsultants(consultantsData);
         } catch (error) {
             console.error("Failed to fetch users:", error);
             toast({ title: "Error", description: "Failed to load user and consultant data.", variant: "destructive"});
