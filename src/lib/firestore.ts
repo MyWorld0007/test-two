@@ -1,5 +1,4 @@
-
-import { db, firebaseConfig, auth } from './firebase';
+import { db, auth } from './firebase';
 import {
   doc,
   getDoc,
@@ -15,8 +14,7 @@ import {
   arrayUnion,
 } from 'firebase/firestore';
 import type { UserRole, EndUserProfile, ConsultantProfile, AdminProfile, AuthenticatedUser, Document as DocumentType, InsurancePolicy } from './types';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 
 // ================== User Profile Functions ==================
 
@@ -136,12 +134,12 @@ export const createConsultantByAdmin = async (
   firstName: string,
   lastName: string
 ): Promise<{ success: boolean; message?: string }> => {
-  const tempAppName = `temp-app-create-consultant-${Date.now()}`;
-  const tempApp = initializeApp(firebaseConfig, tempAppName);
-  const tempAuth = getAuth(tempApp);
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+    // This is a temporary and insecure way to create users.
+    // In a real application, this should be handled by a secure backend function
+    // that uses the Firebase Admin SDK.
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await createUserProfileDocument(
       userCredential.user.uid,
       email,
@@ -149,11 +147,9 @@ export const createConsultantByAdmin = async (
       lastName,
       'consultant'
     );
-    await deleteApp(tempApp);
     return { success: true };
   } catch (error: any) {
     console.error("Admin Consultant Creation Error:", error);
-    await deleteApp(tempApp);
 
     let message = 'An unknown error occurred.';
     switch (error.code) {
@@ -316,5 +312,3 @@ export const getNewConsultantsCount = async (days: number): Promise<number> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.size;
 };
-
-    

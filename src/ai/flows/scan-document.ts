@@ -1,74 +1,54 @@
-// Scans documents using OCR to extract text and categorize them for digital storage.
-
 'use server';
-
+/**
+ * @fileOverview An AI flow to scan a document, extract text, and return a structured summary.
+ *
+ * - scanDocument - A function that handles the document scanning and summarization.
+ */
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {
+  ScanDocumentInputSchema,
+  StructuredDocumentSummarySchema,
+} from '@/lib/types';
+import {z} from 'zod';
 
-const ScanDocumentInputSchema = z.object({
-  documentDataUri: z
-    .string()
-    .describe(
-      "The document to scan, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-});
 export type ScanDocumentInput = z.infer<typeof ScanDocumentInputSchema>;
+export type ScanDocumentOutput = z.infer<
+  typeof StructuredDocumentSummarySchema
+>;
 
-const ScanDocumentOutputSchema = z.object({
-  extractedText: z
-    .string()
-    .describe('The extracted text content from the document.'),
-  category: z.enum(['Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'])
-    .describe('The determined category of the document.'),
-});
-export type ScanDocumentOutput = z.infer<typeof ScanDocumentOutputSchema>;
-
-export async function scanDocument(input: ScanDocumentInput): Promise<ScanDocumentOutput> {
+export async function scanDocument(
+  input: ScanDocumentInput
+): Promise<ScanDocumentOutput> {
   return scanDocumentFlow(input);
 }
 
-const tesseractTool = ai.defineTool({
-  name: 'tesseract',
-  description: 'Use this tool to extract text from a document using OCR technology.',
-  inputSchema: z.object({
-    documentDataUri: z
-      .string()
-      .describe("The document to scan, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
-  }),
-  outputSchema: z.string(),
-  async handler(input) {
-    // Placeholder implementation for Tesseract OCR.
-    // For this example, we'll return a placeholder text that implies a lab report to aid categorization.
-    console.log('Calling tesseract tool with ', input.documentDataUri.substring(0, 50) + '...');
-    return `OCR Result: Patient: John Doe. Blood Test Results. Hemoglobin: 14.5 g/dL. White Blood Cell Count: 7.2 x 10^9/L. This is a sample extracted text from a lab report document.`;
-  },
-});
-
-const scanDocumentPrompt = ai.definePrompt({
+const prompt = ai.definePrompt({
   name: 'scanDocumentPrompt',
   input: {schema: ScanDocumentInputSchema},
-  output: {schema: ScanDocumentOutputSchema},
-  tools: [tesseractTool],
-  prompt: `You are a document processing expert specializing in medical records. Your job is to extract text from a document and classify it into one of the following categories: 'Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'.
+  output: {schema: StructuredDocumentSummarySchema},
+  prompt: `You are an expert at analyzing medical documents. Extract the text from the following document and provide a structured summary.
 
-  - 'Lab': For laboratory test results.
-  - 'Clinical': For doctor's notes, clinical summaries, or prescriptions.
-  - 'Hospital': For hospital admission/discharge papers, or surgical reports.
-  - 'Estimate': For billing estimates or insurance pre-authorizations.
-  - 'Other': For any document that does not fit the above categories.
+Document to analyze:
+{{media url=documentDataUri}}
 
-  Use the 'tesseract' tool with the documentDataUri to extract the text from the document provided. Based on the extracted text, determine the most appropriate category and return both the text and the category.
-  `,
+Your output MUST be in the format defined by the output schema.
+- For 'outcome', provide a concise summary of 2-3 sentences explaining the findings in simple, understandable terms.
+- If a value for a field is not available in the text, you must return "N/A".
+- For the 'category' field, classify the document into one of the following: 'Lab', 'Clinical', 'Hospital', 'Estimate', 'Other'.
+- For 'extractedText', provide the full text you extracted from the document.`,
 });
 
 const scanDocumentFlow = ai.defineFlow(
   {
     name: 'scanDocumentFlow',
     inputSchema: ScanDocumentInputSchema,
-    outputSchema: ScanDocumentOutputSchema,
+    outputSchema: StructuredDocumentSummarySchema,
   },
-  async input => {
-    const {output} = await scanDocumentPrompt(input);
-    return output!;
+  async (input) => {
+    const {output} = await prompt(input);
+    if (!output) {
+      throw new Error('Failed to get a structured response from the AI model.');
+    }
+    return output;
   }
 );

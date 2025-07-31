@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, type ChangeEvent } from 'react';
@@ -345,7 +344,7 @@ export function UserSearchAndDisplay() {
                       <li key={doc.id} className="flex items-center justify-between text-sm p-2 rounded bg-background shadow-sm">
                          <div>
                           <p className="font-medium">{doc.name}</p>
-                          {doc.summary && <p className="text-xs text-muted-foreground mt-1 truncate" title={doc.summary}>Summary: {doc.summary.substring(0,60)}...</p>}
+                          {doc.summary && <p className="text-xs text-muted-foreground mt-1 truncate" title={doc.summary.outcome}>Summary: {doc.summary.outcome.substring(0,60)}...</p>}
                         </div>
                         <Button variant="outline" size="icon" title="View Document" onClick={() => setDocumentToPreview(doc)}>
                             <Eye className="h-4 w-4" />
@@ -485,5 +484,3 @@ export function UserSearchAndDisplay() {
     </div>
   );
 }
-
-    

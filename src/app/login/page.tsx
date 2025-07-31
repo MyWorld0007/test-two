@@ -1,4 +1,3 @@
-
 'use client';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { useAuth } from '@/hooks/useAuth';

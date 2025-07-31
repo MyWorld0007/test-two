@@ -8,9 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import type { Document as DocumentType, EndUserProfile, DocumentCategory } from '@/lib/types';
+import type { Document as DocumentType, EndUserProfile, DocumentCategory, StructuredDocumentSummary } from '@/lib/types';
 import { scanDocument } from '@/ai/flows/scan-document';
-import { summarizeText } from '@/ai/flows/summarize-text-flow';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, UploadCloud, Edit2, Trash2, Loader2, Download, FileJson2, Folder, Eye } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -18,9 +17,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { translations } from '@/lib/translations';
+import { Separator } from '../ui/separator';
 
 export function DocumentManager() {
-  const { user, addDocument, updateUserProfile } = useAuth(); // Use the new addDocument function
+  const { user, addDocument, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -30,7 +30,6 @@ export function DocumentManager() {
   const [newFileName, setNewFileName] = useState('');
   const [documentToPreview, setDocumentToPreview] = useState<DocumentType | null>(null);
 
-  // Get documents directly from the auth context user profile to ensure it's always in sync.
   const documents: DocumentType[] = (user?.role === 'enduser' && (user.profile as EndUserProfile).documents) ? (user.profile as EndUserProfile).documents : [];
 
   if (user?.role !== 'enduser') {
@@ -73,6 +72,7 @@ export function DocumentManager() {
           uploadedAt: new Date().toISOString(),
           category: scanResult.category,
           extractedText: scanResult.extractedText,
+          summary: scanResult,
         };
 
         const result = await addDocument(newDocument);
@@ -96,55 +96,25 @@ export function DocumentManager() {
     }
   };
   
-  const handleScanAndSummarize = async (doc: DocumentType) => {
-    toast({ title: 'Generating summary...', description: 'Please wait while we scan and summarize your document.' });
-
-    let textToSummarize = doc.extractedText;
-
-    if (!textToSummarize) {
-      // If there's no extracted text, we must rescan the document using its stored data URI.
-      toast({ title: "Scan Required", description: "Document needs to be scanned first. This may take a moment."});
-      try {
-        const scanResult = await scanDocument({ documentDataUri: doc.dataUri });
-        textToSummarize = scanResult.extractedText;
-        
-        const updatedDocsWithText = documents.map((d) =>
-          d.id === doc.id ? { ...d, extractedText: textToSummarize, category: scanResult.category } : d
-        );
-        await updateUserProfile({ documents: updatedDocsWithText });
-
-      } catch (e) {
-        console.error('OCR Error during combined flow:', e);
-        toast({ title: 'Scan Failed', description: 'Could not extract text from the document.', variant: 'destructive' });
-        return; 
-      }
-    }
-
-    if (!textToSummarize) {
-      toast({ title: "Summarization Error", description: "No text was found to summarize.", variant: "destructive" });
-      return;
-    }
+  const handleSummarize = async (doc: DocumentType) => {
+    setIsSummarizing(true);
+    setViewingDocument(doc); // Open the dialog immediately
 
     try {
-      setIsSummarizing(true);
-      setViewingDocument(doc);
-
-      const summaryResultText = await summarizeText({ 
-          textToSummarize, 
-          language: userProfile.preferredLanguage || 'English' 
-      });
-      const summary = summaryResultText.summary;
-
-      const finalUpdatedDocs = documents.map((d) =>
-        d.id === doc.id ? { ...d, summary } : d
-      );
-      await updateUserProfile({ documents: finalUpdatedDocs });
-      
-      toast({ title: 'Summary Generated', description: 'The document has been successfully summarized.'});
-
-      const finalDoc = finalUpdatedDocs.find(d => d.id === doc.id);
-      if (finalDoc) setViewingDocument(finalDoc);
-
+      // The summary is now part of the initial scan, so we just need to ensure it exists.
+      // If not, we re-scan to generate it.
+      if (!doc.summary || !doc.extractedText) {
+         toast({ title: "Generating Summary...", description: "Please wait while the AI analyzes your document." });
+         const scanResult = await scanDocument({ documentDataUri: doc.dataUri });
+         const updatedDoc = { ...doc, summary: scanResult, extractedText: scanResult.extractedText, category: scanResult.category };
+         
+         const finalUpdatedDocs = documents.map((d) =>
+            d.id === doc.id ? updatedDoc : d
+         );
+         await updateUserProfile({ documents: finalUpdatedDocs });
+         setViewingDocument(updatedDoc); // Update the dialog with the new data
+         toast({ title: 'Summary Generated', description: 'The document has been successfully summarized.'});
+      }
     } catch (e) {
       console.error('Summarization Error:', e);
       toast({ title: 'Summarization Failed', description: (e as Error).message || 'Could not summarize the document.', variant: 'destructive' });
@@ -178,6 +148,45 @@ export function DocumentManager() {
     acc[category].push(doc);
     return acc;
   }, {} as Record<DocumentCategory, DocumentType[]>);
+  
+  const renderSummary = (summary: StructuredDocumentSummary) => (
+    <div className="space-y-3 text-sm">
+        <div className="flex">
+            <strong className="w-40 flex-shrink-0">{'Clinic / Lab Name:'}</strong>
+            <span>{summary.instituteName}</span>
+        </div>
+        <Separator/>
+        <div className="flex">
+            <strong className="w-40 flex-shrink-0">{'Patient Name:'}</strong>
+            <span>{summary.patientName}</span>
+        </div>
+        <Separator/>
+        <div className="flex">
+            <strong className="w-40 flex-shrink-0">{'Age:'}</strong>
+            <span>{summary.age}</span>
+        </div>
+        <Separator/>
+        <div className="flex">
+            <strong className="w-40 flex-shrink-0">{'Gender:'}</strong>
+            <span>{summary.gender}</span>
+        </div>
+        <Separator/>
+        <div className="space-y-1">
+            <strong className="w-40 flex-shrink-0">{'Treatment / Test Name:'}</strong>
+            <p className="pt-1">{summary.testName}</p>
+        </div>
+        <Separator/>
+        <div className="space-y-1">
+            <strong className="w-40 flex-shrink-0">{'Outcome:'}</strong>
+            <p className="pt-1 whitespace-pre-wrap">{summary.outcome}</p>
+        </div>
+         <Separator/>
+        <div className="space-y-1">
+            <strong className="w-40 flex-shrink-0">{'Other Findings:'}</strong>
+            <p className="pt-1 whitespace-pre-wrap">{summary.otherInfo}</p>
+        </div>
+    </div>
+);
 
   return (
     <div className="space-y-6">
@@ -227,7 +236,7 @@ export function DocumentManager() {
                                <Button variant="outline" size="icon" title={t.viewButton} onClick={() => setDocumentToPreview(doc)}>
                                  <Eye className="h-4 w-4" />
                                </Button>
-                              <Button variant="outline" size="icon" title={t.summarizeButton} onClick={() => handleScanAndSummarize(doc)}>
+                              <Button variant="outline" size="icon" title="Summarize" onClick={() => handleSummarize(doc)}>
                                 <FileJson2 className="h-4 w-4" />
                               </Button>
                               <Button variant="outline" size="icon" title={t.renameButton} onClick={() => { setEditingDocument(doc); setNewFileName(doc.name); }}>
@@ -271,31 +280,30 @@ export function DocumentManager() {
       </Card>
       
       <Dialog open={!!viewingDocument} onOpenChange={(isOpen) => { if (!isOpen) { setViewingDocument(null); } }}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{t.summaryDialogTitle}: {viewingDocument?.name}</DialogTitle>
+            <DialogTitle>Structured Summary: {viewingDocument?.name}</DialogTitle>
             <DialogDescription>
-              {t.summaryDialogDescription}
+              This is an AI-generated summary of the document's content.
             </DialogDescription>
           </DialogHeader>
           
           <div className="max-h-[60vh] overflow-y-auto p-1">
-            <h3 className="font-semibold mb-2 text-lg">{t.summaryDialogHeader}</h3>
-            <ScrollArea className="h-96 border p-4 rounded-md bg-muted/20">
+            <div className="border p-4 rounded-md bg-muted/20">
               {isSummarizing ? (
-                <div className="flex items-center justify-center h-full">
+                <div className="flex items-center justify-center h-48">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2">{t.summaryDialogGenerating}</p>
+                  <p className="ml-2">Analyzing Document...</p>
                 </div>
               ) : viewingDocument?.summary ? (
-                <pre className="whitespace-pre-wrap text-sm">{viewingDocument.summary}</pre>
+                renderSummary(viewingDocument.summary)
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                  <p className="text-muted-foreground">{t.summaryDialogNoSummary}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{t.summaryDialogNoSummaryDesc}</p>
+                <div className="flex flex-col items-center justify-center h-48 text-center p-4">
+                  <p className="text-muted-foreground">No summary available.</p>
+                  <p className="text-xs text-muted-foreground mt-2">Click the "Summarize" button again to generate one.</p>
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
 
           <DialogFooter className="mt-4">

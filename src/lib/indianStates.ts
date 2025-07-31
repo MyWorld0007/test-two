@@ -1,4 +1,3 @@
-
 export const indianStates = [
   { name: 'Andhra Pradesh', cities: ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool'] },
   { name: 'Arunachal Pradesh', cities: ['Itanagar', 'Naharlagun', 'Tawang'] },

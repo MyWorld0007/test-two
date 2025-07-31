@@ -1,4 +1,3 @@
-
 'use client';
 import { PageTitle } from '@/components/common/PageTitle';
 import { UserSearchAndDisplay } from '@/components/dashboard/UserSearchAndDisplay';
@@ -11,5 +10,3 @@ export default function ViewUserPage() {
     </>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow to generate personalized healthy tips for users.
@@ -10,35 +9,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-
-const HealthyTipsInputSchema = z.object({
-  diseaseName: z.string().describe("The name of the user's primary health condition or disease."),
-  stage: z.string().describe("The stage of the disease, if applicable (e.g., 'Stage 2', 'Early')."),
-  age: z.number().describe("The user's age in years."),
-  gender: z.string().describe("The user's gender (e.g., 'Male', 'Female', 'Other')."),
-  dietaryPreference: z.enum(['Veg', 'Non-Veg', 'Both']).describe("The user's dietary preference."),
-  userQuery: z.string().optional().describe("An optional specific request from the user regarding diet or exercise preferences."),
-});
+import {
+  HealthyTipsInputSchema,
+  HealthyTipsOutputSchema,
+} from '@/lib/types';
 export type HealthyTipsInput = z.infer<typeof HealthyTipsInputSchema>;
-
-const HealthyTipsOutputSchema = z.object({
-  exerciseTips: z.array(z.string()).describe('A list of recommended exercises suitable for the user.'),
-  dailyDiet: z.object({
-    breakfast: z.string().describe("Suggestion for breakfast."),
-    lunch: z.string().describe("Suggestion for lunch."),
-    dinner: z.string().describe("Suggestion for dinner."),
-    snacks: z.string().describe("Suggestion for healthy snacks."),
-  }).describe("A sample daily diet plan."),
-  weeklyDietPlan: z.array(z.object({
-      day: z.string().describe("The day of the week (e.g., Monday)."),
-      meals: z.string().describe("A brief description of meals for that day."),
-  })).describe("A sample meal plan for a week."),
-  monthlyDietPlan: z.array(z.object({
-      week: z.string().describe("The week number (e.g., 'Week 1')."),
-      focus: z.string().describe("The dietary focus or theme for that week."),
-  })).describe("A sample high-level meal plan for a month, broken down by week."),
-  thingsToAvoid: z.array(z.string()).describe('A list of foods, ingredients, or habits the user should avoid.'),
-});
 export type HealthyTipsOutput = z.infer<typeof HealthyTipsOutputSchema>;
 
 export async function generateHealthyTips(input: HealthyTipsInput): Promise<HealthyTipsOutput> {

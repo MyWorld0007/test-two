@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 // This file contains all the UI translations for the end-user dashboard.
 // The translations are generated and may not be perfect.
@@ -1037,7 +1036,7 @@ export const translations = {
       deleteConfirmButton: "ಅಳಿಸಿ",
     },
     reminders: {
-      title: "ನನ್ನ ಜ್ಞಾಪನೆಗಳು",
+      title: "ನನ್ನ ಜ್ಞਾಪನೆಗಳು",
       description: "ನೇಮಕಾತಿಗಳು, ಔಷಧಿಗಳು ಅಥವಾ ಬೇರೆ ಯಾವುದಕ್ಕೂ ನಿಮ್ಮ ಜ್ಞಾಪನೆಗಳನ್ನು ಹೊಂದಿಸಿ ಮತ್ತು ನಿರ್ವಹಿಸಿ.",
       cardTitle: "ಜ್ಞಾಪನೆಯನ್ನು ಹೊಂದಿಸಿ",
       cardDescription: "ನೇಮಕಾತಿಗಳು, ಔಷಧಿಗಳು ಅಥವಾ ಬೇರೆ ಯಾವುದಕ್ಕೂ ಜ್ಞಾಪನೆಗಳನ್ನು ಸೇರಿಸಿ.",
